@@ -7,6 +7,11 @@ import (
 	"github.com/solomonwzs/goxutil/closer"
 )
 
+const (
+	_PUB_CACHE = 100
+	_SUB_CACHE = 100
+)
+
 type _Channel struct {
 	enter chan interface{}
 	m     map[uint32]*_Subscriber
@@ -27,7 +32,7 @@ type _Subscriber struct {
 
 func _newChannel() *_Channel {
 	ch := &_Channel{
-		enter:  make(chan interface{}, 100),
+		enter:  make(chan interface{}, _PUB_CACHE),
 		m:      make(map[uint32]*_Subscriber),
 		mlock:  &sync.Mutex{},
 		pid:    0,
@@ -100,7 +105,7 @@ func (ch *_Channel) newSubscriber() *_Subscriber {
 		return nil
 	}
 	sub := &_Subscriber{
-		msgCh:  make(chan interface{}, 10),
+		msgCh:  make(chan interface{}, _SUB_CACHE),
 		Closer: closer.NewCloser(nil),
 		ch:     ch,
 	}

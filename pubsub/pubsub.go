@@ -10,14 +10,14 @@ import (
 var ErrTimeout = errors.New("timeout")
 
 type message struct {
-	notice  chan struct{}
+	ready   chan struct{}
 	next    *message
 	payload interface{}
 }
 
 func newNilMessage() *message {
 	return &message{
-		notice:  make(chan struct{}),
+		ready:   make(chan struct{}),
 		next:    nil,
 		payload: nil,
 	}
@@ -60,10 +60,10 @@ func (ch *Channel) loop() {
 			ch.msg.next = newNilMessage()
 			ch.msg = ch.msg.next
 
-			close(p.notice)
+			close(p.ready)
 		}
 	}
-	close(ch.msg.notice)
+	close(ch.msg.ready)
 }
 
 func (ch *Channel) NewPublisher() *Publisher {
@@ -110,7 +110,7 @@ func (sub *Subscriber) Recv(timeout time.Duration) (
 		defer timer.Stop()
 
 		select {
-		case <-sub.msg.notice:
+		case <-sub.msg.ready:
 			m = sub.msg.payload
 			sub.msg = sub.msg.next
 			if sub.msg == nil {
@@ -121,12 +121,21 @@ func (sub *Subscriber) Recv(timeout time.Duration) (
 			return nil, ErrTimeout
 		}
 	} else {
-		<-sub.msg.notice
+		<-sub.msg.ready
 		m = sub.msg.payload
 		sub.msg = sub.msg.next
 		if sub.msg == nil {
 			err = closer.ErrClosed
 		}
 		return
+	}
+}
+
+func (sub *Subscriber) IsReady() bool {
+	select {
+	case <-sub.msg.ready:
+		return true
+	default:
+		return false
 	}
 }
