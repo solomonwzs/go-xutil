@@ -139,3 +139,7 @@ func (sub *Subscriber) IsReady() bool {
 		return false
 	}
 }
+
+func (sub *Subscriber) Ready() <-chan struct{} {
+	return sub.msg.ready
+}
