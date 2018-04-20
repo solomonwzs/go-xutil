@@ -3,6 +3,8 @@ package pubsub
 import (
 	"sync"
 	"testing"
+
+	"github.com/solomonwzs/goxutil/pubsub"
 )
 
 const (
@@ -16,7 +18,7 @@ func testPubsub(t testing.TB) {
 		readyForSend sync.WaitGroup
 	)
 
-	ch := NewChannel()
+	ch := pubsub.NewChannel(32)
 	readyForSend.Add(_N)
 	for i := 0; i < _N; i++ {
 		wg.Add(1)

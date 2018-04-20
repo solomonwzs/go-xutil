@@ -7,7 +7,10 @@ import (
 	"github.com/solomonwzs/goxutil/closer"
 )
 
-var ErrTimeout = errors.New("timeout")
+var (
+	ErrTimeout = errors.New("timeout")
+	ErrAgain   = errors.New("resource temporarily unavailable")
+)
 
 type message struct {
 	ready   chan struct{}
@@ -37,10 +40,10 @@ type Subscriber struct {
 	msg *message
 }
 
-func NewChannel() *Channel {
+func NewChannel(bufSize int) *Channel {
 	ch := &Channel{
 		msg:    newNilMessage(),
-		enter:  make(chan interface{}),
+		enter:  make(chan interface{}, bufSize),
 		Closer: closer.NewCloser(nil),
 	}
 	go ch.loop()
@@ -103,6 +106,15 @@ func (ch *Channel) NewSubscriber() *Subscriber {
 	}
 }
 
+func (sub *Subscriber) recv() (m interface{}, err error) {
+	m = sub.msg.payload
+	sub.msg = sub.msg.next
+	if sub.msg == nil {
+		err = closer.ErrClosed
+	}
+	return
+}
+
 func (sub *Subscriber) Recv(timeout time.Duration) (
 	m interface{}, err error) {
 	if timeout > 0 {
@@ -111,23 +123,22 @@ func (sub *Subscriber) Recv(timeout time.Duration) (
 
 		select {
 		case <-sub.msg.ready:
-			m = sub.msg.payload
-			sub.msg = sub.msg.next
-			if sub.msg == nil {
-				err = closer.ErrClosed
-			}
-			return
+			return sub.recv()
 		case <-timer.C:
 			return nil, ErrTimeout
 		}
 	} else {
 		<-sub.msg.ready
-		m = sub.msg.payload
-		sub.msg = sub.msg.next
-		if sub.msg == nil {
-			err = closer.ErrClosed
-		}
-		return
+		return sub.recv()
+	}
+}
+
+func (sub *Subscriber) NonBlockRecv() (m interface{}, err error) {
+	select {
+	case <-sub.msg.ready:
+		return sub.recv()
+	default:
+		return nil, ErrAgain
 	}
 }
 
