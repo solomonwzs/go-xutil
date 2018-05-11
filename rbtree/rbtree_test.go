@@ -28,6 +28,15 @@ func TestRbtree(t *testing.T) {
 		InsertWithoutBalance(tree, n, intComp, COEXIST_IF_EXIST)
 		InsertCase(tree, n)
 	}
+	it := NewIterator(tree, true)
+	for {
+		if n, end := it.Next(); end {
+			break
+		} else {
+			fmt.Printf("%v ", n.Item)
+		}
+	}
+	fmt.Printf("\n")
 	fmt.Println(tree)
 
 	for _, i := range arr {

@@ -21,8 +21,8 @@ const (
 )
 
 const (
-	LEFT  Direction = 0x00
-	RIGHT Direction = 0x01
+	_LEFT  Direction = 0x00
+	_RIGHT Direction = 0x01
 )
 
 const (
@@ -164,7 +164,7 @@ func rotateLeft(t *RBTree, p *Node) {
 func deleteCase1(t *RBTree, n *Node, fa *Node, s **Node, d Direction) {
 	(*s).color = _BLACK
 	fa.color = _RED
-	if d == LEFT {
+	if d == _LEFT {
 		rotateLeft(t, fa)
 		*s = fa.right
 	} else {
@@ -180,7 +180,7 @@ func deleteCase2(t *RBTree, n **Node, fa **Node, s *Node) {
 }
 
 func deleteCase3(t *RBTree, n *Node, fa *Node, s **Node, d Direction) {
-	if d == LEFT {
+	if d == _LEFT {
 		if left := (*s).left; left != nil {
 			left.color = _BLACK
 		}
@@ -200,7 +200,7 @@ func deleteCase3(t *RBTree, n *Node, fa *Node, s **Node, d Direction) {
 func deleteCase4(t *RBTree, n **Node, fa *Node, s *Node, d Direction) {
 	s.color = fa.color
 	fa.color = _BLACK
-	if d == LEFT {
+	if d == _LEFT {
 		if right := s.right; right != nil {
 			right.color = _BLACK
 		}
@@ -219,31 +219,31 @@ func deleteCase(t *RBTree, n *Node, fa *Node) {
 		if n == fa.left {
 			s := fa.right
 			if s.color == _RED {
-				deleteCase1(t, n, fa, &s, LEFT)
+				deleteCase1(t, n, fa, &s, _LEFT)
 			}
 			if (s.left == nil || s.left.color == _BLACK) &&
 				(s.right == nil || s.right.color == _BLACK) {
 				deleteCase2(t, &n, &fa, s)
 			} else {
 				if s.right == nil || s.right.color == _BLACK {
-					deleteCase3(t, n, fa, &s, LEFT)
+					deleteCase3(t, n, fa, &s, _LEFT)
 				}
-				deleteCase4(t, &n, fa, s, LEFT)
+				deleteCase4(t, &n, fa, s, _LEFT)
 				break
 			}
 		} else {
 			s := fa.left
 			if s.color == _RED {
-				deleteCase1(t, n, fa, &s, RIGHT)
+				deleteCase1(t, n, fa, &s, _RIGHT)
 			}
 			if (s.left == nil || s.left.color == _BLACK) &&
 				(s.right == nil || s.right.color == _BLACK) {
 				deleteCase2(t, &n, &fa, s)
 			} else {
 				if s.left == nil || s.left.color == _BLACK {
-					deleteCase3(t, n, fa, &s, RIGHT)
+					deleteCase3(t, n, fa, &s, _RIGHT)
 				}
-				deleteCase4(t, &n, fa, s, RIGHT)
+				deleteCase4(t, &n, fa, s, _RIGHT)
 				break
 			}
 		}
@@ -409,7 +409,7 @@ func insertToLRMost(root **Node, n *Node, d Direction) {
 	n.right = nil
 	n.color = _RED
 	ptr := root
-	if d == LEFT {
+	if d == _LEFT {
 		for *ptr != nil {
 			n.parent = *ptr
 			ptr = &(*ptr).left
@@ -430,17 +430,18 @@ func RemoveSubtree(t *RBTree, sub *Node) {
 	} else if sub == fa.left {
 		sil := fa.right
 		swapNodeWithSubtree(t, fa, sil)
-		insertToLRMost(&sil, fa, LEFT)
+		insertToLRMost(&sil, fa, _LEFT)
 		InsertCase(t, fa)
 	} else {
 		sil := fa.left
 		swapNodeWithSubtree(t, fa, sil)
-		insertToLRMost(&sil, fa, RIGHT)
+		insertToLRMost(&sil, fa, _RIGHT)
 		InsertCase(t, fa)
 	}
 }
 
-func InsertWithoutBalance(t *RBTree, n *Node, comp Compare, flag InsertFlag) (ori *Node) {
+func InsertWithoutBalance(t *RBTree, n *Node, comp Compare, flag InsertFlag) (
+	ori *Node) {
 	n.parent = nil
 	n.left = nil
 	n.right = nil
@@ -512,4 +513,82 @@ func Find(t *RBTree, item interface{}, comp Compare) *Node {
 		}
 	}
 	return nil
+}
+
+func FindMin(t *RBTree) *Node {
+	ptr := t.root
+	for ptr != nil {
+		if ptr.left != nil {
+			ptr = ptr.left
+		} else {
+			return ptr
+		}
+	}
+	return nil
+}
+
+func FindMax(t *RBTree) *Node {
+	ptr := t.root
+	for ptr != nil {
+		if ptr.right != nil {
+			ptr = ptr.right
+		} else {
+			return ptr
+		}
+	}
+	return nil
+}
+
+type Iterator struct {
+	stack   []*Node
+	reverse bool
+}
+
+func addLeftPathToStack(ptr *Node, stack *[]*Node) {
+	for ptr != nil {
+		*stack = append(*stack, ptr)
+		ptr = ptr.left
+	}
+}
+
+func addRightPathToStack(ptr *Node, stack *[]*Node) {
+	for ptr != nil {
+		*stack = append(*stack, ptr)
+		ptr = ptr.right
+	}
+}
+
+func NewIterator(t *RBTree, reverse bool) *Iterator {
+	stack := []*Node{}
+	if !reverse {
+		addLeftPathToStack(t.root, &stack)
+	} else {
+		addRightPathToStack(t.root, &stack)
+	}
+	return &Iterator{
+		stack:   stack,
+		reverse: reverse,
+	}
+}
+
+func (it *Iterator) Next() (node *Node, end bool) {
+	l := len(it.stack)
+	if l > 0 {
+		node = it.stack[l-1]
+		end = false
+
+		it.stack = it.stack[:l-1]
+		if !it.reverse {
+			if node.right != nil {
+				addLeftPathToStack(node.right, &it.stack)
+			}
+		} else {
+			if node.left != nil {
+				addRightPathToStack(node.left, &it.stack)
+			}
+		}
+	} else {
+		end = true
+	}
+	return
 }
