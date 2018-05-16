@@ -1,0 +1,17 @@
+package network
+
+// Type of Service
+const (
+	IPV4_ST_PRE_ROUTINE        = 0
+	IPV4_ST_PRE_PRIORITY       = 1
+	IPV4_ST_PRE_IMMEDIATE      = 2
+	IPV4_ST_PRE_FLASH          = 3
+	IPV4_ST_PRE_FLASH_OVERRIDE = 4
+	IPV4_ST_PRE_CRI_ECP        = 5
+	IPV4_ST_PRE_INNET_CTRL     = 6
+	IPV4_ST_PRE_NET_CONTROL    = 7
+
+	IPV4_ST_LOW_DELAY       = 8
+	IPV4_ST_HIGH_THROUGHPUT = 16
+	IPV4_ST_HIGH_RELIBILITY = 32
+)
