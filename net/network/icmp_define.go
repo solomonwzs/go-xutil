@@ -28,3 +28,8 @@ const (
 	ICMP_CC_HOST_PRE_VIOLATION = 14
 	ICMP_CC_PRE_CUTOFF         = 15
 )
+
+const (
+	SIZEOF_ICMP_HEADER = 4
+	SIZEOF_ICMP_ECHO   = 4
+)

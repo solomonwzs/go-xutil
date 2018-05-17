@@ -1,26 +1,45 @@
 package network
 
 import (
-	"errors"
+	"encoding/binary"
 	"unsafe"
 )
 
-type IcmpHeader struct {
-	typ      uint8
-	code     uint8
+type Icmp struct {
+	Type     uint8
+	Code     uint8
 	checksum uint16
+	Data     NetworkData
 }
 
-func BuildIcmpHeader(raw []byte, typ uint8, code uint8) (err error) {
-	if len(raw) < 4 {
-		return errors.New("[icmp] length of raw less than 4")
+func (icmp *Icmp) Marshal() (b []byte, err error) {
+	if icmp.Data == nil {
+		b = make([]byte, SIZEOF_ICMP_HEADER)
+	} else if b0, err0 := icmp.Data.Marshal(); err0 != nil {
+		return b, err0
+	} else {
+		b = make([]byte, int(SIZEOF_ICMP_HEADER)+len(b0))
+		copy(b[SIZEOF_ICMP_HEADER:], b0)
 	}
+	b[0] = icmp.Type
+	b[1] = icmp.Code
+	checksum := (*uint16)(unsafe.Pointer(&b[2]))
 
-	header := (*IcmpHeader)(unsafe.Pointer(&raw[0]))
-	header.typ = typ
-	header.code = code
-	header.checksum = 0
-	header.checksum = Checksum(raw)
+	*checksum = 0
+	*checksum = Checksum(b)
+	return
+}
+
+type IcmpEcho struct {
+	Id     uint16
+	SeqNum uint16
+}
+
+func (e *IcmpEcho) Marshal() (b []byte, err error) {
+	b = make([]byte, SIZEOF_ICMP_ECHO)
+
+	binary.BigEndian.PutUint16(b[0:], e.Id)
+	binary.BigEndian.PutUint16(b[2:], e.SeqNum)
 
 	return
 }

@@ -5,26 +5,27 @@ import (
 	"net"
 	"sync"
 	"testing"
-	"unsafe"
 )
 
 func icmpRequest(tb testing.TB) {
 	// conn, err := net.Dial("ip4:icmp", "59.66.1.1")
-	conn, err := net.Dial("ip4:icmp", "1.1.1.1")
+	conn, err := net.Dial("ip4:icmp", "1.1.1.2")
+	// conn, err := net.Dial("ip4:icmp", "192.168.197.1")
 	if err != nil {
 		tb.Fatal(err)
 	}
 	defer conn.Close()
 
-	var msg [512]byte
-	id := (*uint16)(unsafe.Pointer(&msg[4]))
-	*id = 13
-	seq := (*uint16)(unsafe.Pointer(&msg[6]))
-	*seq = 37
-	BuildIcmpHeader(msg[:], 8, 0)
-	fmt.Println(msg[:8])
-
-	_, err = conn.Write(msg[:8])
+	icmp := Icmp{
+		Type: ICMP_CT_ECHO_REQUEST,
+		Code: 0,
+		Data: &IcmpEcho{
+			Id:     123,
+			SeqNum: 456,
+		},
+	}
+	msg, _ := icmp.Marshal()
+	_, err = conn.Write(msg)
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -35,11 +36,11 @@ func icmpRequest(tb testing.TB) {
 	}
 	defer listener.Close()
 
-	n, err := listener.Read(msg[:])
-	if err != nil {
-		tb.Fatal(err)
-	}
-	fmt.Println("--", msg[:n])
+	// n, err := listener.Read(msg[:])
+	// if err != nil {
+	// 	tb.Fatal(err)
+	// }
+	// fmt.Println("--", msg[:n])
 }
 
 func icmpReply(tb testing.TB) {
@@ -63,7 +64,7 @@ func _TestDailIP(t *testing.T) {
 		icmpRequest(t)
 		wg.Done()
 	}()
-	icmpReply(t)
+	// icmpReply(t)
 
 	wg.Wait()
 }
