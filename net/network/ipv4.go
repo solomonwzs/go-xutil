@@ -55,3 +55,35 @@ func (h *IPv4Header) Marshal() (b []byte, err error) {
 	*checksum = Checksum(b)
 	return
 }
+
+func IPv4HeaderUnmarshal(b []byte) (h *IPv4Header, err error) {
+	h = &IPv4Header{}
+
+	h.Version = b[0] >> 4
+	h.IHL = (b[0] & 0x0f) << 2
+	if len(b) < int(h.IHL) {
+		return nil, errors.New("[ipv4] IHL error")
+	}
+
+	h.TOS = b[1]
+	h.Length = binary.BigEndian.Uint16(b[2:])
+	h.Id = binary.BigEndian.Uint16(b[4:])
+
+	f := binary.BigEndian.Uint16(b[6:])
+	h.Flags = f >> 13
+	h.FragOffset = f & 0x1fff
+
+	h.TTL = b[8]
+	h.Protocol = b[9]
+	h.checksum = binary.BigEndian.Uint16(b[10:])
+
+	h.SrcAddr = net.IP(b[12:16])
+	h.DstAddr = net.IP(b[16:20])
+
+	if h.IHL > SIZEOF_IPV4_HEADER {
+		h.Options = make([]byte, h.IHL-SIZEOF_IPV4_HEADER)
+		copy(h.Options, b[SIZEOF_IPV4_HEADER:])
+	}
+
+	return
+}

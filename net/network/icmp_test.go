@@ -3,14 +3,17 @@ package network
 import (
 	"fmt"
 	"net"
-	"sync"
+	"os"
+	"os/signal"
+	"syscall"
 	"testing"
+	"time"
 )
 
-func icmpRequest(tb testing.TB) {
+func testIcmpSendLoop(tb testing.TB) {
 	// conn, err := net.Dial("ip4:icmp", "59.66.1.1")
-	conn, err := net.Dial("ip4:icmp", "1.1.1.2")
-	// conn, err := net.Dial("ip4:icmp", "192.168.197.1")
+	// conn, err := net.Dial("ip4:icmp", "1.1.1.1")
+	conn, err := net.Dial("ip4:icmp", "120.78.185.243")
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -25,46 +28,40 @@ func icmpRequest(tb testing.TB) {
 		},
 	}
 	msg, _ := icmp.Marshal()
-	_, err = conn.Write(msg)
-	if err != nil {
-		tb.Fatal(err)
-	}
 
-	listener, err := net.ListenIP("ip4:icmp", nil)
-	if err != nil {
-		tb.Fatal(err)
+	for {
+		_, err = conn.Write(msg)
+		if err != nil {
+			tb.Fatal(err)
+		}
+		time.Sleep(1 * time.Second)
 	}
-	defer listener.Close()
-
-	// n, err := listener.Read(msg[:])
-	// if err != nil {
-	// 	tb.Fatal(err)
-	// }
-	// fmt.Println("--", msg[:n])
 }
 
-func icmpReply(tb testing.TB) {
+func testIcmpRecvLoop(tb testing.TB) {
 	conn, err := net.ListenIP("ip4:icmp", nil)
 	if err != nil {
 		tb.Fatal(err)
 	}
-
 	var msg [512]byte
-	n, err := conn.Read(msg[:])
-	if err != nil {
-		tb.Fatal(err)
+
+	for {
+		n, err := conn.Read(msg[:])
+		if err != nil {
+			tb.Fatal(err)
+		}
+
+		h, _ := IPv4HeaderUnmarshal(msg[:n])
+		fmt.Printf("%+v\n", h)
 	}
-	fmt.Println("<<", msg[:n])
 }
 
-func _TestDailIP(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		icmpRequest(t)
-		wg.Done()
-	}()
-	// icmpReply(t)
+func TestIcmp(t *testing.T) {
+	go testIcmpSendLoop(t)
+	go testIcmpRecvLoop(t)
 
-	wg.Wait()
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGINT,
+		syscall.SIGTERM)
+	<-c
 }
