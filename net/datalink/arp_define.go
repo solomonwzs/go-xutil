@@ -1,0 +1,30 @@
+package arp
+
+const (
+	ARP_OPC_RESERVED          = 0
+	ARP_OPC_REQUEST           = 1
+	ARP_OPC_REPLY             = 2
+	ARP_OPC_REQUEST_R         = 3
+	ARP_OPC_REPLY_R           = 4
+	ARP_OPC_DRAPP_REQEST      = 5
+	ARP_OPC_DRAPP_REPLY       = 6
+	ARP_OPC_DRAPP_ERROR       = 7
+	ARP_OPC_INAPP_REQUEST     = 8
+	ARP_OPC_INAPP_REPLY       = 9
+	ARP_OPC_ARP_NAK           = 10
+	ARP_OPC_MARS_REQUEST      = 11
+	ARP_OPC_MARS_MULTI        = 12
+	ARP_OPC_MARS_MSERV        = 13
+	ARP_OPC_MARS_JOIN         = 14
+	ARP_OPC_MARS_LEAVE        = 15
+	ARP_OPC_MARS_NAK          = 16
+	ARP_OPC_MARS_UNSERV       = 17
+	ARP_OPC_MARS_SJOIN        = 18
+	ARP_OPC_MARS_SLEAVE       = 19
+	ARP_OPC_MARS_GL_REQUEST   = 20
+	ARP_OPC_MARS_GL_REPLY     = 21
+	ARP_OPC_MARS_REDIRECT_MAP = 22
+	ARP_OPC_MAPOS_UNARP       = 23
+	ARP_OPC_OP_EXP1           = 24
+	ARP_OPC_OP_EXP2           = 25
+)

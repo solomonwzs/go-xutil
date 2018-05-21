@@ -2,10 +2,6 @@ package network
 
 import "fmt"
 
-type NetworkData interface {
-	Marshal() ([]byte, error)
-}
-
 func Checksum(raw []byte) uint16 {
 	sum := uint32(0)
 	i := 0

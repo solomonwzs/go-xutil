@@ -3,13 +3,15 @@ package network
 import (
 	"encoding/binary"
 	"unsafe"
+
+	"github.com/solomonwzs/goxutil/net/ethernet"
 )
 
 type Icmp struct {
 	Type     uint8
 	Code     uint8
 	checksum uint16
-	Data     NetworkData
+	Data     ethernet.NetworkData
 }
 
 func (icmp *Icmp) Marshal() (b []byte, err error) {
