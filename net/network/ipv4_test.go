@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/solomonwzs/goxutil/net/ethernet"
+	"github.com/solomonwzs/goxutil/net/util"
 )
 
 func _TestIPv4(t *testing.T) {
 	// fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW,
 	// 	syscall.IPPROTO_RAW)
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		syscall.ETH_P_ALL)
+		int(util.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,8 +42,8 @@ func _TestIPv4(t *testing.T) {
 		},
 	}
 	ethH := &ethernet.EthernetHeader{
-		Src:  []uint8{0x4c, 0xcc, 0x6a, 0xac, 0xe5, 0x63},
-		Dst:  []uint8{0x1c, 0xab, 0x34, 0x12, 0x63, 0xde},
+		Src:  net.HardwareAddr{0x4c, 0xcc, 0x6a, 0xac, 0xe5, 0x63},
+		Dst:  net.HardwareAddr{0x1c, 0xab, 0x34, 0x12, 0x63, 0xde},
 		Type: syscall.ETH_P_IP,
 	}
 

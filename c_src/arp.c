@@ -253,7 +253,8 @@ int main(void) {
              ah->arp_spa[2],
              ah->arp_spa[3]
             );
-      if((ah->arp_spa[0]==10 && ah->arp_spa[1]==0 && ah->arp_spa[2]==0 && ah->arp_spa[3]==1))
+      if((ah->arp_spa[0]==10 && ah->arp_spa[1]==0 &&
+          ah->arp_spa[2]==0 && ah->arp_spa[3]==1))
         printf("------------------------------------------10.0.0.1-----------------------------------------\n");
       printf("TARGET MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
              ah->arp_dha[0],
@@ -273,8 +274,9 @@ int main(void) {
       printf("H/D leng : %x PROTO leng : %x \n",ah->arp_hdl,ah->arp_prl);
       printf("OPERATION : %x \n", ah->arp_op);
 
-      sent = sendto(s, buffer, BUF_SIZE, 0, (struct
-                                             sockaddr*)&socket_address, sizeof(socket_address));
+      sent = sendto(s, buffer, BUF_SIZE, 0,
+                    (struct sockaddr*)&socket_address,
+                    sizeof(socket_address));
       if (sent == -1)
       {
         perror("sendto():");

@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/solomonwzs/goxutil/net/ethernet"
+	"github.com/solomonwzs/goxutil/net/util"
 )
 
 type Icmp struct {
@@ -28,7 +29,7 @@ func (icmp *Icmp) Marshal() (b []byte, err error) {
 	checksum := (*uint16)(unsafe.Pointer(&b[2]))
 
 	*checksum = 0
-	*checksum = Checksum(b)
+	*checksum = util.Checksum(b)
 	return
 }
 

@@ -3,46 +3,41 @@ package arp
 import (
 	"fmt"
 	"net"
-	"os"
 	"syscall"
 	"testing"
 
 	"github.com/solomonwzs/goxutil/net/ethernet"
+	"github.com/solomonwzs/goxutil/net/util"
 )
 
 func TestRecv(t *testing.T) {
+	// fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
+	// 	int(ethernet.Htons(syscall.ETH_P_ALL)))
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		syscall.ETH_P_ALL)
+		int(util.Htons(syscall.ETH_P_ARP)))
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer syscall.Close(fd)
 
-	interf, err := net.InterfaceByName("eno1")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	addr := syscall.SockaddrLinklayer{
-		Protocol: syscall.ETH_P_ARP,
-		Ifindex:  interf.Index,
-	}
-
-	syscall.Bind(fd, &addr)
-	f := os.NewFile(uintptr(fd), fmt.Sprintf("fd %d", fd))
-
+	buf := make([]byte, 1024)
+	// typ := (*uint16)(unsafe.Pointer(&buf[12]))
 	for {
-		buf := make([]byte, 1024)
-		numRead, err := f.Read(buf)
+		numRead, _, err := syscall.Recvfrom(fd, buf, 0)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Printf("% X\n", buf[:numRead])
+
+		fmt.Printf("% x\n", buf[:numRead])
+		// if ethernet.Ntohs(*typ) == syscall.ETH_P_ARP {
+		// 	fmt.Printf("% x\n", buf[:numRead])
+		// }
 	}
 }
 
 func _TestARP(t *testing.T) {
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		syscall.ETH_P_ALL)
+		int(util.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,8 +49,8 @@ func _TestARP(t *testing.T) {
 	}
 
 	ethH := &ethernet.EthernetHeader{
-		Src:  []uint8(interf.HardwareAddr),
-		Dst:  []uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		Src:  interf.HardwareAddr,
+		Dst:  ethernet.ETH_BROADCAST_ADDR,
 		Type: syscall.ETH_P_ARP,
 	}
 

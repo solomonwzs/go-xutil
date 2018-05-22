@@ -1,10 +1,15 @@
 package ethernet
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"net"
+)
+
+var ETH_BROADCAST_ADDR = net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
 type EthernetHeader struct {
-	Src  []uint8
-	Dst  []uint8
+	Src  net.HardwareAddr
+	Dst  net.HardwareAddr
 	Type uint16
 }
 
