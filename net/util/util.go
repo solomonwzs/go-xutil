@@ -1,8 +1,10 @@
 package util
 
+import "net"
+
 type TimeoutError struct{}
 
-func (e *TimeoutError) Error() string   { return "i/o timeout" }
+func (e *TimeoutError) Error() string   { return "[net] i/o timeout" }
 func (e *TimeoutError) Timeout() bool   { return true }
 func (e *TimeoutError) Temporary() bool { return true }
 
@@ -44,4 +46,12 @@ func Htons(i uint16) uint16 {
 
 func Ntohs(i uint16) uint16 {
 	return (i<<8)&0xff00 | i>>8
+}
+
+func IPlen(ip net.IP) int {
+	if ipv4 := ip.To4(); ipv4 != nil {
+		return net.IPv4len
+	} else {
+		return net.IPv6len
+	}
 }

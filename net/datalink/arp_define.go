@@ -1,4 +1,4 @@
-package arp
+package datalink
 
 const (
 	ARP_OPC_RESERVED          = 0

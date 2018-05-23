@@ -1,4 +1,4 @@
-package arp
+package datalink
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func _TestRecv(t *testing.T) {
 	}
 }
 
-func TestARP(t *testing.T) {
+func _TestARP(t *testing.T) {
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
 		int(util.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
@@ -43,7 +43,7 @@ func TestARP(t *testing.T) {
 	}
 	defer syscall.Close(fd)
 
-	interf, err := net.InterfaceByName("enp2s0")
+	interf, err := net.InterfaceByName("eno1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,12 +65,10 @@ func TestARP(t *testing.T) {
 		HardwareSize: 6,
 		ProtocolSize: 4,
 		Opcode:       ARP_OPC_REQUEST,
-		SHA:          []uint8(interf.HardwareAddr),
-		// SPA:          []uint8{192, 168, 197, 130},
-		SPA: []uint8{10, 0, 0, 128},
-		THA: make([]uint8, 6, 6),
-		// TPA:          []uint8{192, 168, 197, 252},
-		TPA: []uint8{10, 0, 0, 1},
+		SHA:          interf.HardwareAddr,
+		SPA:          net.IP{192, 168, 197, 130},
+		THA:          make([]uint8, 6, 6),
+		TPA:          net.IP{192, 168, 197, 252},
 	}
 
 	addr := syscall.SockaddrLinklayer{
@@ -106,4 +104,8 @@ func _TestT(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestGetHardwareAddr(t *testing.T) {
+	fmt.Println(GetHardwareAddr("eno1", net.IP{192, 168, 197, 252}, 0))
 }
