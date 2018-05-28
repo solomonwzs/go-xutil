@@ -10,19 +10,19 @@ import (
 	"github.com/solomonwzs/goxutil/net/datalink"
 	"github.com/solomonwzs/goxutil/net/ethernet"
 	"github.com/solomonwzs/goxutil/net/network"
-	"github.com/solomonwzs/goxutil/net/util"
+	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
 
 func TestICMP(t *testing.T) {
 	dev := "eno1"
 
-	gateway, err := util.GetGateway(dev)
+	gateway, err := xnetutil.GetGateway(dev)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	hardwareAddr, err := util.GetHardwareAddr(dev, gateway)
-	if err == util.ERR_NOT_FOUND {
+	hardwareAddr, err := xnetutil.GetHardwareAddr(dev, gateway)
+	if err == xnetutil.ERR_NOT_FOUND {
 		hardwareAddr, err = datalink.GetHardwareAddr(dev, gateway, 0)
 	}
 	if err != nil {
@@ -88,7 +88,7 @@ func TestICMP(t *testing.T) {
 	buf.Write(p2)
 
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(util.Htons(syscall.ETH_P_ALL)))
+		int(xnetutil.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		t.Fatal(err)
 	}

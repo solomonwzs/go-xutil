@@ -6,7 +6,7 @@ import (
 	"net"
 	"unsafe"
 
-	"github.com/solomonwzs/goxutil/net/util"
+	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
 
 type IPv4Header struct {
@@ -54,7 +54,7 @@ func (h *IPv4Header) Marshal() (b []byte, err error) {
 	}
 
 	*checksum = 0
-	*checksum = util.Checksum(b)
+	*checksum = xnetutil.Checksum(b)
 	return
 }
 

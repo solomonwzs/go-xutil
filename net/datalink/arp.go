@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/solomonwzs/goxutil/net/ethernet"
-	"github.com/solomonwzs/goxutil/net/util"
+	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
 
 type ArpRaw []byte
@@ -113,7 +113,7 @@ func recvArpReplyPacket(fd int, targetIP net.IP, res chan net.HardwareAddr) {
 			return
 		}
 		if arpRaw.Opcode() == ARP_OPC_REPLY &&
-			util.BytesEqual(arpRaw.SPA(), targetIP) {
+			xnetutil.BytesEqual(arpRaw.SPA(), targetIP) {
 			select {
 			case res <- arpRaw.SHA():
 			default:
@@ -133,7 +133,7 @@ func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
 		return
 	}
 
-	ipLen := util.IPlen(targetIP)
+	ipLen := xnetutil.IPlen(targetIP)
 	haLen := len(interf.HardwareAddr)
 	p := [][]byte{}
 	ethH := &ethernet.EthernetHeader{
@@ -145,7 +145,7 @@ func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
 	for _, addr := range addrs {
 		if spa, _, err := net.ParseCIDR(addr.String()); err != nil {
 			return
-		} else if util.IPlen(spa) == ipLen {
+		} else if xnetutil.IPlen(spa) == ipLen {
 			arp := Arp{
 				HardwareType: 1,
 				ProtocolType: syscall.ETH_P_IP,
@@ -193,7 +193,7 @@ func GetHardwareAddr(dev string, targetIP net.IP, timeout time.Duration) (
 	}
 
 	recvFd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(util.Htons(syscall.ETH_P_ARP)))
+		int(xnetutil.Htons(syscall.ETH_P_ARP)))
 	if err != nil {
 		return
 	}
@@ -201,7 +201,7 @@ func GetHardwareAddr(dev string, targetIP net.IP, timeout time.Duration) (
 	go recvArpReplyPacket(recvFd, targetIP, res)
 
 	sendFd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(util.Htons(syscall.ETH_P_ALL)))
+		int(xnetutil.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		return
 	}
@@ -212,7 +212,7 @@ func GetHardwareAddr(dev string, targetIP net.IP, timeout time.Duration) (
 		select {
 		case hw = <-res:
 		case <-timer.C:
-			return nil, util.ERR_TIMEOUT
+			return nil, xnetutil.ERR_TIMEOUT
 		}
 	} else {
 		hw = <-res
