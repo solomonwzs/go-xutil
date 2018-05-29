@@ -1,6 +1,9 @@
 package xnetutil
 
-import "net"
+import (
+	"net"
+	"unsafe"
+)
 
 type TimeoutError struct{}
 
@@ -12,17 +15,64 @@ var (
 	ERR_TIMEOUT = &TimeoutError{}
 )
 
-func Checksum(raw []byte) uint16 {
-	sum := uint32(0)
-	i := 0
-	size := len(raw)
-	for ; i < size-1; i += 2 {
-		sum += uint32(raw[i]) + uint32(raw[i+1])<<8
-	}
-	if i != size {
-		sum += uint32(raw[size-1])
-	}
+type Checksumer struct {
+	sum uint32
+	i   int
+}
 
+func checksum(p []byte, sum uint32, i int) (uint32, int) {
+	for _, b := range p {
+		if i&0x1 == 1 {
+			sum += uint32(b) << 8
+		} else {
+			sum += uint32(b)
+		}
+		i += 1
+	}
+	return sum, i
+}
+
+func NewChecksumer() *Checksumer {
+	return &Checksumer{
+		sum: 0,
+		i:   0,
+	}
+}
+
+func (c *Checksumer) Write(p []byte) (n int, err error) {
+	c.sum, c.i = checksum(p, c.sum, c.i)
+	return len(p), nil
+}
+
+func (c *Checksumer) SumU16(p []byte) uint16 {
+	sum, _ := checksum(p, c.sum, c.i)
+	sum = (sum >> 16) + (sum & 0xffff)
+	sum += (sum >> 16)
+	return uint16(^sum)
+}
+
+func (c *Checksumer) Sum(p []byte) []byte {
+	s := []byte{0, 0}
+	sum := (*uint16)(unsafe.Pointer(&s[0]))
+	*sum = c.SumU16(p)
+	return s
+}
+
+func (c *Checksumer) Reset() {
+	c.sum = 0
+	c.i = 0
+}
+
+func (c *Checksumer) Size() int {
+	return 2
+}
+
+func (c *Checksumer) BlockSize() int {
+	return 64
+}
+
+func Checksum(p []byte) uint16 {
+	sum, _ := checksum(p, 0, 0)
 	sum = (sum >> 16) + (sum & 0xffff)
 	sum += (sum >> 16)
 	return uint16(^sum)
