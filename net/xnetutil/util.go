@@ -1,8 +1,8 @@
 package xnetutil
 
 import (
+	"encoding/binary"
 	"net"
-	"unsafe"
 )
 
 type TimeoutError struct{}
@@ -23,9 +23,9 @@ type Checksumer struct {
 func checksum(p []byte, sum uint32, i int) (uint32, int) {
 	for _, b := range p {
 		if i&0x1 == 1 {
-			sum += uint32(b) << 8
-		} else {
 			sum += uint32(b)
+		} else {
+			sum += uint32(b) << 8
 		}
 		i += 1
 	}
@@ -53,8 +53,7 @@ func (c *Checksumer) SumU16(p []byte) uint16 {
 
 func (c *Checksumer) Sum(p []byte) []byte {
 	s := []byte{0, 0}
-	sum := (*uint16)(unsafe.Pointer(&s[0]))
-	*sum = c.SumU16(p)
+	binary.BigEndian.PutUint16(s, c.SumU16(nil))
 	return s
 }
 

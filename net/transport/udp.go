@@ -1,11 +1,14 @@
 package transport
 
 import (
+	"encoding/binary"
 	"errors"
 
 	"github.com/solomonwzs/goxutil/net/network"
 	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
+
+const SIZEOF_UDP_HEADER = 8
 
 type Udp struct {
 	IpH      *network.IPv4Header
@@ -24,6 +27,24 @@ func (u *Udp) Marshal() (b []byte, err error) {
 	s := xnetutil.NewChecksumer()
 	s.Write(u.IpH.SrcAddr[:4])
 	s.Write(u.IpH.DstAddr[:4])
+	s.Write([]byte{
+		0,
+		u.IpH.Protocol,
+		byte(u.Length >> 8), byte(u.Length & 0xff),
+		byte(u.SrcPort >> 8), byte(u.SrcPort & 0xff),
+		byte(u.DstPort >> 8), byte(u.DstPort & 0xff),
+		byte(u.Length >> 8), byte(u.Length & 0xff),
+		0, 0,
+	})
+	s.Write(u.Data)
+	u.Checksum = s.SumU16(nil)
+
+	b = make([]byte, u.Length)
+	binary.BigEndian.PutUint16(b, u.SrcPort)
+	binary.BigEndian.PutUint16(b[2:], u.DstPort)
+	binary.BigEndian.PutUint16(b[4:], u.Length)
+	binary.BigEndian.PutUint16(b[6:], u.Checksum)
+	copy(b[8:], u.Data)
 
 	return
 }

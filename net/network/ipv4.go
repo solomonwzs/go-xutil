@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"net"
-	"unsafe"
 
 	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
@@ -19,7 +18,7 @@ type IPv4Header struct {
 	FragOffset uint16
 	TTL        uint8
 	Protocol   uint8
-	checksum   uint16
+	Checksum   uint16
 	SrcAddr    net.IP
 	DstAddr    net.IP
 	Options    []byte
@@ -42,7 +41,6 @@ func (h *IPv4Header) Marshal() (b []byte, err error) {
 		h.Flags<<13|(h.FragOffset&0x1fff))
 	b[8] = h.TTL
 	b[9] = h.Protocol
-	checksum := (*uint16)(unsafe.Pointer(&b[10]))
 
 	if ip := h.SrcAddr.To4(); ip != nil {
 		copy(b[12:16], ip[:net.IPv4len])
@@ -53,8 +51,9 @@ func (h *IPv4Header) Marshal() (b []byte, err error) {
 		return nil, errors.New("[ipv4] missing address")
 	}
 
-	*checksum = 0
-	*checksum = xnetutil.Checksum(b)
+	h.Checksum = xnetutil.Checksum(b)
+	binary.BigEndian.PutUint16(b[10:], h.Checksum)
+
 	return
 }
 
@@ -77,7 +76,7 @@ func IPv4HeaderUnmarshal(b []byte) (h *IPv4Header, err error) {
 
 	h.TTL = b[8]
 	h.Protocol = b[9]
-	h.checksum = binary.BigEndian.Uint16(b[10:])
+	h.Checksum = binary.BigEndian.Uint16(b[10:])
 
 	h.SrcAddr = net.IP(b[12:16])
 	h.DstAddr = net.IP(b[16:20])

@@ -52,11 +52,11 @@ func testIcmpRecvLoop(tb testing.TB) {
 		}
 
 		h, _ := IPv4HeaderUnmarshal(msg[:n])
-		fmt.Printf("%+v\n", h)
+		fmt.Printf("%x\n", h.Checksum)
 	}
 }
 
-func _TestIcmp(t *testing.T) {
+func TestIcmp(t *testing.T) {
 	go testIcmpSendLoop(t)
 	go testIcmpRecvLoop(t)
 

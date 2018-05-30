@@ -2,7 +2,6 @@ package network
 
 import (
 	"encoding/binary"
-	"unsafe"
 
 	"github.com/solomonwzs/goxutil/net/ethernet"
 	"github.com/solomonwzs/goxutil/net/xnetutil"
@@ -11,7 +10,7 @@ import (
 type Icmp struct {
 	Type     uint8
 	Code     uint8
-	checksum uint16
+	Checksum uint16
 	Data     ethernet.NetworkData
 }
 
@@ -26,10 +25,10 @@ func (icmp *Icmp) Marshal() (b []byte, err error) {
 	}
 	b[0] = icmp.Type
 	b[1] = icmp.Code
-	checksum := (*uint16)(unsafe.Pointer(&b[2]))
 
-	*checksum = 0
-	*checksum = xnetutil.Checksum(b)
+	icmp.Checksum = xnetutil.Checksum(b)
+	binary.BigEndian.PutUint16(b[2:], icmp.Checksum)
+
 	return
 }
 

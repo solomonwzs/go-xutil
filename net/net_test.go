@@ -1,33 +1,23 @@
 package net
 
 import (
-	"bytes"
 	"net"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/solomonwzs/goxutil/net/datalink"
-	"github.com/solomonwzs/goxutil/net/ethernet"
 	"github.com/solomonwzs/goxutil/net/network"
-	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
 
-func TestICMP(t *testing.T) {
+func TestICMP0(t *testing.T) {
 	dev := "eno1"
 
-	gateway, err := xnetutil.GetGateway(dev)
+	sock, err := datalink.NewDlSocket(dev, syscall.ETH_P_IP)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	hardwareAddr, err := xnetutil.GetHardwareAddr(dev, gateway)
-	if err == xnetutil.ERR_NOT_FOUND {
-		hardwareAddr, err = datalink.GetHardwareAddr(dev, gateway, 0)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	defer sock.Close()
 
 	interf, err := net.InterfaceByName(dev)
 	if err != nil {
@@ -50,11 +40,6 @@ func TestICMP(t *testing.T) {
 		t.Fatal("can not get local ip")
 	}
 
-	ethH := &ethernet.EthernetHeader{
-		Src:  interf.HardwareAddr,
-		Dst:  hardwareAddr,
-		Type: syscall.ETH_P_IP,
-	}
 	ipH := &network.IPv4Header{
 		Version:    4,
 		TOS:        0,
@@ -64,9 +49,7 @@ func TestICMP(t *testing.T) {
 		TTL:        64,
 		Protocol:   syscall.IPPROTO_ICMP,
 		SrcAddr:    localIP,
-		// DstAddr:    net.IPv4(120, 78, 185, 243),
-		DstAddr: net.IPv4(59, 66, 1, 1),
-		// DstAddr: net.IPv4(1, 1, 1, 1),
+		DstAddr:    net.IPv4(59, 66, 1, 1),
 	}
 	icmp := &network.Icmp{
 		Type: network.ICMP_CT_ECHO_REQUEST,
@@ -77,28 +60,13 @@ func TestICMP(t *testing.T) {
 		},
 	}
 
-	p0, _ := ethH.Marshal()
-	p2, _ := icmp.Marshal()
-	ipH.Length = network.SIZEOF_IPV4_HEADER + uint16(len(p2))
-	p1, _ := ipH.Marshal()
-
-	buf := new(bytes.Buffer)
-	buf.Write(p0)
-	buf.Write(p1)
-	buf.Write(p2)
-
-	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(xnetutil.Htons(syscall.ETH_P_ALL)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer syscall.Close(fd)
-	to := syscall.SockaddrLinklayer{
-		Ifindex: interf.Index,
-	}
+	p1, _ := icmp.Marshal()
+	ipH.Length = network.SIZEOF_IPV4_HEADER + uint16(len(p1))
+	p0, _ := ipH.Marshal()
+	p0 = append(p0, p1...)
 
 	for {
-		err = syscall.Sendto(fd, buf.Bytes(), 0, &to)
+		_, err = sock.Write(p0)
 		if err != nil {
 			t.Fatal(err)
 		}
