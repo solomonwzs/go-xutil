@@ -12,13 +12,18 @@ import "C"
 import (
 	"errors"
 	"net"
+	"sync"
 	"time"
 	"unsafe"
 )
 
+var pcapCompileLock = &sync.Mutex{}
+
 type Handle struct {
 	handle *C.pcap_t
 	interf *net.Interface
+	netp   C.bpf_u_int32
+	maskp  C.bpf_u_int32
 }
 
 func DatalinkName(typ int) string {
@@ -38,6 +43,10 @@ func pcapError(errBuf []byte) error {
 	return errors.New(string(errBuf[:i]))
 }
 
+func charptr(errBuf []byte) *C.char {
+	return (*C.char)(unsafe.Pointer(&errBuf[0]))
+}
+
 func UnsafeString(p unsafe.Pointer) string {
 	var l uintptr = 0
 	for ; *(*byte)(unsafe.Pointer(uintptr(p) + l)) != 0; l++ {
@@ -54,7 +63,7 @@ func UnsafeBytes(p unsafe.Pointer, size int) []byte {
 
 func PcapLookupDev() (string, error) {
 	errBuf := make([]byte, C.PCAP_ERRBUF_SIZE)
-	dev := C.pcap_lookupdev((*C.char)(unsafe.Pointer(&errBuf[0])))
+	dev := C.pcap_lookupdev(charptr(errBuf))
 
 	if dev == nil {
 		return "", pcapError(errBuf)
@@ -68,8 +77,14 @@ func PcapLookupDev() (string, error) {
 
 func OpenLive(dev string, snaplen int, promisc bool, toMs time.Duration) (
 	h *Handle, err error) {
-	device := C.CString(dev)
-	defer C.free(unsafe.Pointer(device))
+	interf, err := net.InterfaceByName(dev)
+	if err != nil {
+		return
+	}
+	h = &Handle{interf: interf}
+
+	cDev := C.CString(dev)
+	defer C.free(unsafe.Pointer(cDev))
 
 	var pro C.int = 0
 	if promisc {
@@ -77,27 +92,56 @@ func OpenLive(dev string, snaplen int, promisc bool, toMs time.Duration) (
 	}
 
 	errBuf := make([]byte, C.PCAP_ERRBUF_SIZE)
-	handle := C.pcap_open_live(
-		device,
-		C.int(snaplen),
-		pro,
-		C.int(toMs/time.Millisecond),
-		(*C.char)(unsafe.Pointer(&errBuf[0])),
-	)
-
-	if handle == nil {
+	if C.pcap_lookupnet(cDev, &h.netp, &h.maskp, charptr(errBuf)) == -1 {
 		return nil, pcapError(errBuf)
 	}
 
-	return &Handle{
-		handle: handle,
-	}, nil
-}
+	h.handle = C.pcap_open_live(
+		cDev,
+		C.int(snaplen),
+		pro,
+		C.int(toMs/time.Millisecond),
+		charptr(errBuf),
+	)
 
-func (h *Handle) GetDatalink() (typ int) {
-	typ = int(C.pcap_datalink(h.handle))
+	if h.handle == nil {
+		return nil, pcapError(errBuf)
+	}
+
 	return
 }
 
-func (h *Handle) Compile(filter string) {
+func (h *Handle) Error() error {
+	return errors.New(C.GoString(C.pcap_geterr(h.handle)))
+}
+
+func (h *Handle) DatalinkType() int {
+	return int(C.pcap_datalink(h.handle))
+}
+
+func (h *Handle) compile(expr string) (
+	bpf C.struct_bpf_program, err error) {
+	cExpr := C.CString(expr)
+	defer C.free(unsafe.Pointer(cExpr))
+
+	pcapCompileLock.Lock()
+	defer pcapCompileLock.Unlock()
+
+	if C.pcap_compile(h.handle, &bpf, cExpr, 1, h.maskp) == -1 {
+		return bpf, h.Error()
+	}
+	return
+}
+
+func (h *Handle) SetFilter(expr string) (err error) {
+	bpf, err := h.compile(expr)
+	if err != nil {
+		return
+	}
+	defer C.pcap_freecode(&bpf)
+
+	if C.pcap_setfilter(h.handle, &bpf) == -1 {
+		return h.Error()
+	}
+	return nil
 }

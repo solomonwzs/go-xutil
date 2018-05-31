@@ -12,5 +12,6 @@ func TestPcap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(h.GetDatalink())
+	fmt.Println(h.DatalinkType())
+	fmt.Println(h.SetFilter("tcp port 80"))
 }
