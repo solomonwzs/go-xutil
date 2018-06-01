@@ -1,20 +1,20 @@
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 
 #include <asm/types.h>
 
+#include <arpa/inet.h>
 #include <math.h>
-#include <string.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <signal.h>
-#include <arpa/inet.h>
 
-#include <linux/if_packet.h>
-#include <linux/if_ether.h>
 #include <linux/if_arp.h>
+#include <linux/if_ether.h>
+#include <linux/if_packet.h>
 
 #define BUF_SIZE 42
 #define DEVICE "eno1"
@@ -43,7 +43,7 @@ struct __attribute__((packed)) arp_header
 };
 
 int main(void) {
-  buffer = (void*)malloc(BUF_SIZE); /*Buffer for Ethernet Frame*/
+  buffer = malloc(BUF_SIZE); /*Buffer for Ethernet Frame*/
   unsigned char* etherhead = buffer;	/*Pointer to Ethenet Header*/
   struct ethhdr *eh = (struct ethhdr *)etherhead; /*Another pointer to
                                                     ethernet header*/
@@ -113,12 +113,13 @@ int main(void) {
     if(ntohs(eh->h_proto) == ETH_P_ARP)
     {
 
-      unsigned char buf_arp_dha[6];
+      /* unsigned char buf_arp_dha[6]; */
       unsigned char buf_arp_dpa[4];
 
       ah = (struct arp_header *)arphead;
-      if(ntohs(ah->arp_op) != ARPOP_REQUEST)
+      if(ntohs(ah->arp_op) != ARPOP_REQUEST) {
         continue;
+      }
       printf("buffer is---------------- %s \n",(char*)ah);
       printf("H/D TYPE : %x PROTO TYPE : %x \n",ah->arp_hd,ah->arp_pr);
       printf("H/D leng : %x PROTO leng : %x \n",ah->arp_hdl,ah->arp_prl);
@@ -254,8 +255,9 @@ int main(void) {
              ah->arp_spa[3]
             );
       if((ah->arp_spa[0]==10 && ah->arp_spa[1]==0 &&
-          ah->arp_spa[2]==0 && ah->arp_spa[3]==1))
+          ah->arp_spa[2]==0 && ah->arp_spa[3]==1)) {
         printf("------------------------------------------10.0.0.1-----------------------------------------\n");
+      }
       printf("TARGET MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
              ah->arp_dha[0],
              ah->arp_dha[1],
@@ -291,13 +293,15 @@ int main(void) {
 
   }
 }
+
 void sigint(int signum) {
   /*Clean up.......*/
 
   struct ifreq ifr;
 
-  if (s == -1)
+  if (s == -1) {
     return;
+  }
 
   strncpy(ifr.ifr_name, DEVICE, IFNAMSIZ);
   ioctl(s, SIOCGIFFLAGS, &ifr);

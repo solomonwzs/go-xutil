@@ -47,19 +47,19 @@ func charptr(errBuf []byte) *C.char {
 	return (*C.char)(unsafe.Pointer(&errBuf[0]))
 }
 
-func UnsafeString(p unsafe.Pointer) string {
-	var l uintptr = 0
-	for ; *(*byte)(unsafe.Pointer(uintptr(p) + l)) != 0; l++ {
-	}
-	h := [2]unsafe.Pointer{p, unsafe.Pointer(l)}
-	return *(*string)(unsafe.Pointer(&h))
-}
+// func UnsafeString(p unsafe.Pointer) string {
+// 	var l uintptr = 0
+// 	for ; *(*byte)(unsafe.Pointer(uintptr(p) + l)) != 0; l++ {
+// 	}
+// 	h := [2]unsafe.Pointer{p, unsafe.Pointer(l)}
+// 	return *(*string)(unsafe.Pointer(&h))
+// }
 
-func UnsafeBytes(p unsafe.Pointer, size int) []byte {
-	l := unsafe.Pointer(uintptr(size))
-	h := [3]unsafe.Pointer{p, l, l}
-	return *(*[]byte)(unsafe.Pointer(&h))
-}
+// func UnsafeBytes(p unsafe.Pointer, size int) []byte {
+// 	l := unsafe.Pointer(uintptr(size))
+// 	h := [3]unsafe.Pointer{p, l, l}
+// 	return *(*[]byte)(unsafe.Pointer(&h))
+// }
 
 func PcapLookupDev() (string, error) {
 	errBuf := make([]byte, C.PCAP_ERRBUF_SIZE)
@@ -69,10 +69,7 @@ func PcapLookupDev() (string, error) {
 		return "", pcapError(errBuf)
 	}
 
-	size := C.strlen(dev)
-	b := UnsafeBytes(unsafe.Pointer(dev), int(size))
-
-	return string(b), nil
+	return C.GoString(dev), nil
 }
 
 func OpenLive(dev string, snaplen int, promisc bool, toMs time.Duration) (
