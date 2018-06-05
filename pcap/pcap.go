@@ -11,15 +11,19 @@ package pcap
 import "C"
 import (
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/solomonwzs/goxutil/closer"
 )
 
 var pcapCompileLock = &sync.Mutex{}
 
 type Handle struct {
+	closer.Closer
 	handle *C.pcap_t
 	interf *net.Interface
 	netp   C.bpf_u_int32
@@ -104,6 +108,10 @@ func OpenLive(dev string, snaplen int, promisc bool, toMs time.Duration) (
 	if h.handle == nil {
 		return nil, pcapError(errBuf)
 	}
+	h.Closer = closer.NewCloser(func() error {
+		C.pcap_close(h.handle)
+		return nil
+	})
 
 	return
 }
@@ -141,4 +149,12 @@ func (h *Handle) SetFilter(expr string) (err error) {
 		return h.Error()
 	}
 	return nil
+}
+
+func (h *Handle) Next() (n int, err error) {
+	var header C.struct_pcap_pkthdr
+	data := C.pcap_next(h.handle, &header)
+	b := C.GoBytes(unsafe.Pointer(&data), C.int(header.len))
+	fmt.Println(b)
+	return
 }

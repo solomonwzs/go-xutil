@@ -12,6 +12,9 @@ func TestPcap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
+
 	fmt.Println(h.DatalinkType())
-	fmt.Println(h.SetFilter("tcp port 80"))
+	fmt.Println(h.SetFilter("icmp"))
+	h.Next()
 }
