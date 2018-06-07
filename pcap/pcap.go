@@ -6,11 +6,37 @@ package pcap
 #include <pcap.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
+#include <sys/select.h>
 
 int
 _pcap_next_ex(pcap_t *p, uintptr_t hdr, uintptr_t pkt) {
 	return pcap_next_ex(p, (struct pcap_pkthdr**)hdr, (const u_char**) pkt);
+}
+
+int
+_pcap_wait(pcap_t *p, int to_us) {
+	int fd = pcap_get_selectable_fd(p);
+	if (fd < 0) {
+		return -1;
+	}
+
+	fd_set fds;
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+
+	int n;
+	if (to_us != 0) {
+		struct timeval tv;
+		tv.tv_sec = to_us / 1000000;
+		tv.tv_usec = to_us % 1000000;
+		n = select(fd + 1, &fds, NULL, NULL, &tv);
+	} else {
+		n = select(fd + 1, &fds, NULL, NULL, NULL);
+	}
+	if (n == -1) {
+		perror("select: ");
+	}
+	return n;
 }
 */
 import "C"
@@ -23,6 +49,10 @@ import (
 	"unsafe"
 
 	"github.com/solomonwzs/goxutil/closer"
+)
+
+var (
+	ErrHandlerWasClosed = errors.New("[pcap] handler was closed")
 )
 
 const (
@@ -101,7 +131,7 @@ func PcapLookupDev() (string, error) {
 	return C.GoString(dev), nil
 }
 
-func OpenLive(dev string, snaplen int, promisc bool, toMs time.Duration) (
+func OpenLive(dev string, snaplen int, promisc bool, timeout time.Duration) (
 	h *Handle, err error) {
 	interf, err := net.InterfaceByName(dev)
 	if err != nil {
@@ -126,7 +156,7 @@ func OpenLive(dev string, snaplen int, promisc bool, toMs time.Duration) (
 		cDev,
 		C.int(snaplen),
 		pro,
-		C.int(toMs/time.Millisecond),
+		C.int(timeout/time.Millisecond),
 		charptr(errBuf),
 	)
 
@@ -199,4 +229,14 @@ func (h *Handle) ReadPacket() (packet CapturePacket, err error) {
 	fmt.Println(uintptr(unsafe.Pointer(&packet.Data[0])))
 	fmt.Println(uintptr(unsafe.Pointer(unsafe.Pointer(h.packet))))
 	return
+}
+
+func (h *Handle) Wait(timeout time.Duration) (ready bool, err error) {
+	if n := C._pcap_wait(
+		h.handle, C.int(timeout/time.Microsecond)); n < 0 {
+		err = errors.New("[pcap] wait fail")
+		return
+	} else {
+		return n != 0, nil
+	}
 }
