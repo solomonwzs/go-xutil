@@ -2,7 +2,11 @@ package logger
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"runtime"
 	"sync/atomic"
+	"time"
 
 	"github.com/solomonwzs/goxutil/closer"
 	"github.com/solomonwzs/goxutil/pubsub"
@@ -142,4 +146,25 @@ func Critcalf(format string, argv ...interface{}) {
 
 func Critcal(argv ...interface{}) {
 	log(CRITICAL, 3, "", argv...)
+}
+
+func DPrintf(format string, argv ...interface{}) {
+	msg := fmt.Sprintf(format, argv...)
+	dPrint(msg)
+}
+
+func DPrintln(argv ...interface{}) {
+	msg := fmt.Sprintln(argv...)
+	dPrint(msg)
+}
+
+func dPrint(msg string) {
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		file = "???"
+		line = 0
+	}
+	fmt.Printf("%s=%d= %s [%s:%d] \033[0m%s",
+		_COLOR_GREEN, os.Getpid(), time.Now().Format("15:04:05"),
+		ShortFilename(file), line, msg)
 }

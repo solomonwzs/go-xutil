@@ -1,29 +1,30 @@
 package pcap
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/solomonwzs/goxutil/csignal"
+	"github.com/solomonwzs/goxutil/logger"
 )
 
 func TestPcap(t *testing.T) {
 	ch := make(chan os.Signal)
-	csignal.Notify(ch, syscall.SIGSEGV)
+	csignal.Notify(ch, syscall.SIGSEGV, syscall.SIGABRT)
 	go func() {
 		for {
 			select {
 			case sig := <-ch:
-				fmt.Println("got signal:", sig)
+				logger.DPrintln("got signal:", sig)
 				os.Exit(1)
 			}
 		}
 	}()
 
 	dev, err := PcapLookupDev()
+	logger.DPrintln(dev)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,18 +35,23 @@ func TestPcap(t *testing.T) {
 	}
 	defer h.Close()
 
-	if err = h.SetFilter("port 80"); err != nil {
+	if err = h.SetFilter("ip[2:2] > 512"); err != nil {
 		t.Fatal(err)
 	}
 
-	ready, err := h.Wait(5 * time.Second)
-	if err != nil {
-		t.Fatal(err)
-	} else if ready {
-		fmt.Println(h.ReadPacket())
-	} else {
-		fmt.Println("timeout")
+	time.Sleep(5 * time.Second)
+	for i := 0; i < 10; i++ {
+		p, _ := h.ReadPacket(false)
+		logger.DPrintln(p.Ts, p.Len)
 	}
+	// ready, err := h.waitForRead(3 * time.Second)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// } else if ready {
+	// 	logger.DPrintln(h.ReadPacket(false))
+	// } else {
+	// 	logger.DPrintln("timeout")
+	// }
 }
 
 func _BenchmarkPcap(b *testing.B) {
@@ -57,6 +63,6 @@ func _BenchmarkPcap(b *testing.B) {
 	h.SetFilter("tcp")
 
 	for i := 0; i < b.N; i++ {
-		h.ReadPacket()
+		h.ReadPacket(false)
 	}
 }

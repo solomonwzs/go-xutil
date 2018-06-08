@@ -42,8 +42,8 @@ _pcap_wait(pcap_t *p, int to_us) {
 import "C"
 import (
 	"errors"
-	"fmt"
 	"net"
+	"reflect"
 	"sync"
 	"time"
 	"unsafe"
@@ -97,6 +97,15 @@ type Handle struct {
 	pkthdr  *C.struct_pcap_pkthdr
 	packet  *C.u_char
 	pktLock *sync.Mutex
+}
+
+func UnsafeSlice(ptr unsafe.Pointer, len int) (p []byte) {
+	slice := (*reflect.SliceHeader)(unsafe.Pointer(&p))
+	slice.Data = uintptr(ptr)
+	slice.Len = len
+	slice.Cap = len
+
+	return
 }
 
 func DatalinkName(typ int) string {
@@ -159,10 +168,17 @@ func OpenLive(dev string, snaplen int, promisc bool, timeout time.Duration) (
 		C.int(timeout/time.Millisecond),
 		charptr(errBuf),
 	)
-
 	if h.handle == nil {
 		return nil, pcapError(errBuf)
 	}
+
+	// if h.timeout > 0 {
+	// 	if C.pcap_setnonblock(h.handle, 1, charptr(errBuf)) == -1 {
+	// 		C.pcap_close(h.handle)
+	// 		return nil, pcapError(errBuf)
+	// 	}
+	// }
+
 	h.Closer = closer.NewCloser(func() error {
 		C.pcap_close(h.handle)
 		return nil
@@ -206,7 +222,16 @@ func (h *Handle) SetFilter(expr string) (err error) {
 	return nil
 }
 
-func (h *Handle) ReadPacket() (packet CapturePacket, err error) {
+func (h *Handle) ReadPacket(copy bool) (packet CapturePacket, err error) {
+	// if h.timeout > 0 {
+	// 	var ready bool
+	// 	if ready, err = h.waitForRead(h.timeout); err != nil {
+	// 		return
+	// 	} else if !ready {
+	// 		return packet, PcapNextError(PcapNextErrTimeout)
+	// 	}
+	// }
+
 	h.pktLock.Lock()
 	defer h.pktLock.Unlock()
 
@@ -216,7 +241,6 @@ func (h *Handle) ReadPacket() (packet CapturePacket, err error) {
 		C._pcap_next_ex(h.handle, hdrP, pktP)); res != PcapNextOK {
 		return packet, res
 	}
-	defer C.free(unsafe.Pointer(h.packet))
 
 	packet.Ts = time.Unix(
 		int64(h.pkthdr.ts.tv_sec),
@@ -224,14 +248,17 @@ func (h *Handle) ReadPacket() (packet CapturePacket, err error) {
 	)
 	packet.Caplen = uint32(h.pkthdr.caplen)
 	packet.Len = uint32(h.pkthdr.len)
-	packet.Data = C.GoBytes(unsafe.Pointer(h.packet),
-		C.int(h.pkthdr.len))
-	fmt.Println(uintptr(unsafe.Pointer(&packet.Data[0])))
-	fmt.Println(uintptr(unsafe.Pointer(unsafe.Pointer(h.packet))))
+	if copy {
+		packet.Data = C.GoBytes(unsafe.Pointer(h.packet),
+			C.int(h.pkthdr.len))
+	} else {
+		packet.Data = UnsafeSlice(unsafe.Pointer(h.packet),
+			int(h.pkthdr.len))
+	}
 	return
 }
 
-func (h *Handle) Wait(timeout time.Duration) (ready bool, err error) {
+func (h *Handle) WaitForRead(timeout time.Duration) (ready bool, err error) {
 	if n := C._pcap_wait(
 		h.handle, C.int(timeout/time.Microsecond)); n < 0 {
 		err = errors.New("[pcap] wait fail")
