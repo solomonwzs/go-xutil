@@ -21,7 +21,10 @@ type Udp struct {
 
 func (u *Udp) Marshal() (b []byte, err error) {
 	if u.IpH == nil {
-		return nil, errors.New("miss ip header")
+		return nil, errors.New("[udp] miss ip header")
+	}
+	if u.Length == 0 {
+		u.Length = uint16(SIZEOF_UDP_HEADER + len(u.Data))
 	}
 
 	s := xnetutil.NewChecksumer()
