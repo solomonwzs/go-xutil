@@ -101,8 +101,13 @@ func (ch *Channel) NewSubscriber() *Subscriber {
 	if ch.IsClosed() {
 		return nil
 	}
-	return &Subscriber{
-		msg: ch.msg,
+
+	if msg := ch.msg; msg == nil {
+		return nil
+	} else {
+		return &Subscriber{
+			msg: ch.msg,
+		}
 	}
 }
 

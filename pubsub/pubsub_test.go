@@ -3,6 +3,7 @@ package pubsub
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/solomonwzs/goxutil/pubsub"
 )
@@ -12,7 +13,7 @@ const (
 	_M = 100
 )
 
-func testPubsub(t testing.TB) {
+func testPubsub(t testing.TB, timeout time.Duration) {
 	var (
 		wg           sync.WaitGroup
 		readyForSend sync.WaitGroup
@@ -26,7 +27,7 @@ func testPubsub(t testing.TB) {
 			sub := ch.NewSubscriber()
 			readyForSend.Done()
 			for j := 0; j < _M; j++ {
-				sub.Recv(0)
+				sub.Recv(timeout)
 			}
 			wg.Done()
 		}()
@@ -41,7 +42,7 @@ func testPubsub(t testing.TB) {
 	wg.Wait()
 }
 
-func testPubsub2(t testing.TB) {
+func testPubsub2(t testing.TB, timeout time.Duration) {
 	var (
 		wg           sync.WaitGroup
 		readyForSend sync.WaitGroup
@@ -55,7 +56,7 @@ func testPubsub2(t testing.TB) {
 			sub := ch.newSubscriber()
 			readyForSend.Done()
 			for j := 0; j < _M; j++ {
-				sub.recv(0)
+				sub.recv(timeout)
 			}
 			wg.Done()
 		}()
@@ -71,17 +72,29 @@ func testPubsub2(t testing.TB) {
 }
 
 func TestPubsub(t *testing.T) {
-	testPubsub2(t)
+	testPubsub2(t, 0)
 }
 
 func BenchmarkPubsub(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		testPubsub(b)
+		testPubsub(b, 0)
+	}
+}
+
+func BenchmarkPubsubWithTimeout(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testPubsub(b, 500*time.Millisecond)
 	}
 }
 
 func BenchmarkPubsub2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		testPubsub2(b)
+		testPubsub2(b, 0)
+	}
+}
+
+func BenchmarkPubsub2WithTimeout(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testPubsub2(b, 500*time.Millisecond)
 	}
 }
