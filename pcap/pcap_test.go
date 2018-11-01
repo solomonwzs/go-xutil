@@ -23,13 +23,13 @@ func TestPcap(t *testing.T) {
 		}
 	}()
 
-	dev, err := PcapLookupDev()
+	dev, err := PcapFindAllDevs()
 	logger.DPrintln(dev)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h, err := OpenLive(dev, 512, true, 1*time.Second)
+	h, err := OpenLive(dev[0], 512, true, 1*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestPcap(t *testing.T) {
 	}
 
 	time.Sleep(5 * time.Second)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 5; i++ {
 		p, _ := h.ReadPacket(false)
 		logger.DPrintln(p.Ts, p.Len)
 	}

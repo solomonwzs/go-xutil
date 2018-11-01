@@ -8,6 +8,8 @@ package pcap
 #include <stdlib.h>
 #include <sys/select.h>
 
+#define SIZEOF_PCAP_IF_T sizeof(pcap_if_t)
+
 int
 _pcap_next_ex(pcap_t *p, uintptr_t hdr, uintptr_t pkt) {
 	return pcap_next_ex(p, (struct pcap_pkthdr**)hdr, (const u_char**) pkt);
@@ -129,16 +131,35 @@ func charptr(errBuf []byte) *C.char {
 	return (*C.char)(unsafe.Pointer(&errBuf[0]))
 }
 
-func PcapLookupDev() (string, error) {
+func PcapFindAllDevs() ([]string, error) {
+	var devsp *C.pcap_if_t
 	errBuf := make([]byte, C.PCAP_ERRBUF_SIZE)
-	dev := C.pcap_lookupdev(charptr(errBuf))
 
-	if dev == nil {
-		return "", pcapError(errBuf)
+	if C.pcap_findalldevs(&devsp, charptr(errBuf)) != 0 {
+		return nil, pcapError(errBuf)
+	} else {
+		defer C.pcap_freealldevs(devsp)
+
+		devspn := []string{C.GoString(devsp.name)}
+		next := devsp.next
+		for next != nil {
+			devspn = append(devspn, C.GoString(next.name))
+			next = next.next
+		}
+		return devspn, nil
 	}
-
-	return C.GoString(dev), nil
 }
+
+// func PcapLookupDev() (string, error) {
+// 	errBuf := make([]byte, C.PCAP_ERRBUF_SIZE)
+// 	dev := C.pcap_lookupdev(charptr(errBuf))
+
+// 	if dev == nil {
+// 		return "", pcapError(errBuf)
+// 	}
+
+// 	return C.GoString(dev), nil
+// }
 
 func OpenLive(dev string, snaplen int, promisc bool, timeout time.Duration) (
 	h *Handle, err error) {
