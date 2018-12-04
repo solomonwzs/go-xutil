@@ -1,12 +1,9 @@
 package dhcp
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
-	"sync/atomic"
 	"testing"
-	"unsafe"
 )
 
 func TestDHCP(t *testing.T) {
@@ -22,15 +19,14 @@ func TestDHCP(t *testing.T) {
 	}
 	fmt.Println(interf.HardwareAddr)
 
-	buf := make([]byte, MSG_FIX_SIZE)
-	msg := (*Message)(unsafe.Pointer(&buf[0]))
+	msg := NewMessage()
+	msg.fix.Op = BOOTREQUEST
+	msg.fix.Htype = HTYPE_ETHERNET
+	msg.fix.Hlen = HLEN_ETHERNET
+	copy(msg.fix.Chaddr[:], interf.HardwareAddr)
+	msg.SetCookie([]byte("DHCP"))
+	msg.SetMassageType(DHCPDISCOVER)
+	msg.SetClientID(HTYPE_ETHERNET, interf.HardwareAddr)
 
-	msg.Op = BOOTREQUEST
-	msg.Htype = HTYPE_10MB_ETH
-	msg.Hlen = HLEN_10MB_ETH
-	binary.BigEndian.PutUint32(
-		msg.Xid[:], atomic.AddUint32(&_TransactionID, 1))
-	copy(msg.Chaddr[:], interf.HardwareAddr)
-
-	fmt.Println(buf)
+	conn.Write(msg.Marshal())
 }

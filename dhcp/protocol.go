@@ -7,17 +7,49 @@ import (
 )
 
 const (
+	// UDP port
 	SRC_PORT = 68
 	DST_PORT = 67
 
+	// Message op
 	BOOTREQUEST = 1
 	BOOTREPLY   = 2
 
-	HTYPE_10MB_ETH = 1
+	// Hardware address type
+	HTYPE_ETHERNET = 1
 
-	HLEN_10MB_ETH = 6
+	// Hardware address length
+	HLEN_ETHERNET = 6
 
-	MSG_FIX_SIZE = unsafe.Sizeof(Message{})
+	// Optionals
+	OPT_HOSTNAME  = 12
+	OPT_MSG_TYPE  = 53
+	OPT_PARA_REQ  = 55
+	OPT_CLASS_ID  = 60
+	OPT_CLIENT_ID = 61
+	OPT_END       = 255
+
+	// DHCP message type
+	DHCPDISCOVER = 1
+	DHCPOFFER
+	DHCPREQUEST
+	DHCPDECLINE
+	DHCPACK
+	DHCPNAK
+	DHCPRELEASE
+	DHCPINFORM
+	DHCPFORCERENEW
+	DHCPLEASEQUERY
+	DHCPLEASEUNASSIGNED
+	DHCPLEASEUNKNOWN
+	DHCPLEASEACTIVE
+	DHCPBULKLEASEQUERY
+	DHCPLEASEQUERYDONE
+	DHCPACTIVELEASEQUERY
+	DHCPLEASEQUERYSTATUS
+	DHCPTLS
+
+	MSG_FIX_SIZE = unsafe.Sizeof(MessageFix{})
 )
 
 var (
@@ -28,7 +60,7 @@ var (
 	_DstAddr *net.UDPAddr
 )
 
-type Message struct {
+type MessageFix struct {
 	Op     byte
 	Htype  byte
 	Hlen   byte
