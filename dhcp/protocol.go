@@ -2,14 +2,13 @@ package dhcp
 
 import (
 	"math/rand"
-	"net"
 	"unsafe"
 )
 
 const (
 	// UDP port
-	SRC_PORT = 68
-	DST_PORT = 67
+	CLIENT_PORT = 68
+	SERVER_PORT = 67
 
 	// Message op
 	BOOTREQUEST = 1
@@ -22,12 +21,21 @@ const (
 	HLEN_ETHERNET = 6
 
 	// Optionals
-	OPT_HOSTNAME  = 12
-	OPT_MSG_TYPE  = 53
-	OPT_PARA_REQ  = 55
-	OPT_CLASS_ID  = 60
-	OPT_CLIENT_ID = 61
-	OPT_END       = 255
+	OPT_SUBNET_MASK     = 1
+	OPT_ROUTER          = 3
+	OPT_TIME_SERVER     = 4
+	OPT_NAME_SERVER     = 5
+	OPT_DOMAIN_SERVER   = 6
+	OPT_HOSTNAME        = 12
+	OPT_ADDR_LEASE_TIME = 51
+	OPT_MSG_TYPE        = 53
+	OPT_SERVER_ID       = 54
+	OPT_PARA_REQ        = 55
+	OPT_RENEWAL_TIME    = 58
+	OPT_REBINDING_TIME  = 59
+	OPT_CLASS_ID        = 60
+	OPT_CLIENT_ID       = 61
+	OPT_END             = 255
 
 	// DHCP message type
 	DHCPDISCOVER = 1
@@ -53,11 +61,10 @@ const (
 )
 
 var (
+	_COOKIE = []byte{0x63, 0x82, 0x53, 0x63}
+
 	_TransactionID uint32
 	_Rand          *rand.Rand
-
-	_SrcAddr *net.UDPAddr
-	_DstAddr *net.UDPAddr
 )
 
 type MessageFix struct {
