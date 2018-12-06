@@ -7,14 +7,14 @@ import (
 	"testing"
 
 	"github.com/solomonwzs/goxutil/net/ethernet"
-	"github.com/solomonwzs/goxutil/net/util"
+	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
 
 func _TestRecv(t *testing.T) {
 	// fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
 	// 	int(ethernet.Htons(syscall.ETH_P_ALL)))
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(util.Htons(syscall.ETH_P_ARP)))
+		int(xnetutil.Htons(syscall.ETH_P_ARP)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func _TestRecv(t *testing.T) {
 
 func _TestARP(t *testing.T) {
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(util.Htons(syscall.ETH_P_ALL)))
+		int(xnetutil.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		t.Fatal(err)
 	}
