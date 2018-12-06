@@ -21,24 +21,31 @@ const (
 	HLEN_ETHERNET = 6
 
 	// Optionals
+	OPT_PAD             = 0
 	OPT_SUBNET_MASK     = 1
 	OPT_ROUTER          = 3
 	OPT_TIME_SERVER     = 4
 	OPT_NAME_SERVER     = 5
 	OPT_DOMAIN_SERVER   = 6
 	OPT_HOSTNAME        = 12
+	OPT_ADDR_REQUEST    = 50
 	OPT_ADDR_LEASE_TIME = 51
 	OPT_MSG_TYPE        = 53
-	OPT_SERVER_ID       = 54
+	OPT_DHCP_SERVER_ID  = 54
 	OPT_PARA_REQ        = 55
 	OPT_RENEWAL_TIME    = 58
 	OPT_REBINDING_TIME  = 59
 	OPT_CLASS_ID        = 60
 	OPT_CLIENT_ID       = 61
+	OPT_RAPID_COMMIT    = 80
 	OPT_END             = 255
 
+	MSG_FIX_SIZE = int(unsafe.Sizeof(MessageFix{}))
+)
+
+const (
 	// DHCP message type
-	DHCPDISCOVER = 1
+	DHCPDISCOVER = iota + 1
 	DHCPOFFER
 	DHCPREQUEST
 	DHCPDECLINE
@@ -56,12 +63,10 @@ const (
 	DHCPACTIVELEASEQUERY
 	DHCPLEASEQUERYSTATUS
 	DHCPTLS
-
-	MSG_FIX_SIZE = unsafe.Sizeof(MessageFix{})
 )
 
 var (
-	_COOKIE = []byte{0x63, 0x82, 0x53, 0x63}
+	_COOKIE = [4]byte{0x63, 0x82, 0x53, 0x63}
 
 	_TransactionID uint32
 	_Rand          *rand.Rand

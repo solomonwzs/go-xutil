@@ -30,14 +30,9 @@ func _TestDHCP0(t *testing.T) {
 	}
 	fmt.Println(interf.HardwareAddr)
 
-	msg := NewMessage()
-	msg.fix.Op = BOOTREQUEST
-	msg.fix.Htype = HTYPE_ETHERNET
-	msg.fix.Hlen = HLEN_ETHERNET
-	copy(msg.fix.Chaddr[:], interf.HardwareAddr)
-	msg.SetMassageType(DHCPDISCOVER)
-	msg.SetClientID(HTYPE_ETHERNET, interf.HardwareAddr)
-	// msg.SetBroadcast()
+	msg := NewMessaageForInterface(interf)
+	msg.SetMessageType(DHCPDISCOVER)
+	msg.SetBroadcast()
 
 	conn.Write(msg.Marshal())
 
@@ -66,40 +61,72 @@ func TestDHCP1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := make(chan struct{})
-	go func() {
-		buf := make([]byte, 1024)
-		if n, from, err := syscall.Recvfrom(fd, buf, 0); err != nil {
-			t.Fatal(err)
-		} else {
-			fmt.Println(n, from)
-			close(c)
-		}
-	}()
-
 	interf, err := net.InterfaceByName("eno1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	msg := NewMessage()
-	msg.fix.Op = BOOTREQUEST
-	msg.fix.Htype = HTYPE_ETHERNET
-	msg.fix.Hlen = HLEN_ETHERNET
-	copy(msg.fix.Chaddr[:], interf.HardwareAddr)
-	msg.SetMassageType(DHCPDISCOVER)
-	msg.SetBroadcast()
-	msg.SetClientID(HTYPE_ETHERNET, interf.HardwareAddr)
-
+	buf := make([]byte, 1024)
 	addr1 := syscall.SockaddrInet4{
 		Port: SERVER_PORT,
 		Addr: [4]byte{255, 255, 255, 255},
 	}
+
+	// discover
+	msg := NewMessaageForInterface(interf)
+	msg.SetMessageType(DHCPDISCOVER)
+	msg.SetBroadcast()
 	if err = syscall.Sendto(fd, msg.Marshal(), 0, &addr1); err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println(">>> discover")
 
-	<-c
+	// offer
+	n, from0, err := syscall.Recvfrom(fd, buf, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := from0.(*syscall.SockaddrInet4)
+	respMsg, err := Unmarshal(buf[:n])
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientIP := respMsg.ClientIP()
+	dhcpServerIP, _ := respMsg.DHCPServerID()
+	mask, _ := respMsg.SubnetMask()
+	router, _ := respMsg.Router()
+	leaseTime, _ := respMsg.AddressLeaseTime()
+	fmt.Println("<<< offer")
+	fmt.Printf("from:        %s\n", net.IP(from.Addr[:]))
+	fmt.Printf("client IP:   %s\n", clientIP)
+	fmt.Printf("DHCP server: %s\n", dhcpServerIP)
+	fmt.Printf("subnet mask: %s\n", mask)
+	fmt.Printf("router:      %s\n", router)
+	fmt.Printf("lease time:  %d\n", leaseTime)
+
+	// request
+	msg = NewMessaageForInterface(interf)
+	msg.SetBroadcast()
+	msg.SetMessageType(DHCPREQUEST)
+	msg.SetOptions(OPT_ADDR_REQUEST, []byte(clientIP))
+	msg.SetOptions(OPT_DHCP_SERVER_ID, []byte(dhcpServerIP))
+	if err = syscall.Sendto(fd, msg.Marshal(), 0, &addr1); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(">>> request")
+
+	// ack
+	n, from0, err = syscall.Recvfrom(fd, buf, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	from = from0.(*syscall.SockaddrInet4)
+	respMsg, err = Unmarshal(buf[:n])
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("<<< ack")
+	fmt.Println("from:", net.IP(from.Addr[:]))
 }
 
 func _TestUDP0(t *testing.T) {
@@ -127,6 +154,10 @@ func _TestUDP1(t *testing.T) {
 		return
 	}
 	defer syscall.Close(fd)
+
+	if err = syscall.SetNonblock(fd, true); err != nil {
+		t.Fatal(err)
+	}
 
 	// if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET,
 	// 	syscall.SO_BROADCAST, 1); err != nil {
