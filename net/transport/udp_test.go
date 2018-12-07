@@ -11,7 +11,7 @@ import (
 	"github.com/solomonwzs/goxutil/net/network"
 )
 
-func TestChecksum(t *testing.T) {
+func _TestChecksum(t *testing.T) {
 	ipRaw := []byte{
 		0x45, 0x00, 0x00, 0x2b, 0x7a, 0x8f, 0x00, 0x00,
 		0x40, 0x11, 0x79, 0xf2, 0xc0, 0xa8, 0xc5, 0x98,
@@ -19,7 +19,7 @@ func TestChecksum(t *testing.T) {
 	}
 	ipH, _ := network.IPv4HeaderUnmarshal(ipRaw)
 
-	u := &Udp{
+	u := &UDP{
 		IpH:     ipH,
 		SrcPort: 9999,
 		DstPort: 10000,
@@ -33,7 +33,7 @@ func TestChecksum(t *testing.T) {
 	logger.DPrintf("%x\n", u.Checksum)
 }
 
-func TestUdp(t *testing.T) {
+func _TestUDP(t *testing.T) {
 	dev := "eno1"
 
 	sock, err := datalink.NewDlSocket(dev, syscall.ETH_P_IP)
@@ -75,7 +75,7 @@ func TestUdp(t *testing.T) {
 		DstAddr:    net.IPv4(120, 78, 185, 243),
 	}
 
-	u := &Udp{
+	u := &UDP{
 		IpH:     ipH,
 		SrcPort: 7777,
 		DstPort: 8888,
@@ -93,5 +93,27 @@ func TestUdp(t *testing.T) {
 			t.Fatal(err)
 		}
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func TestBroadcast(t *testing.T) {
+	conn, err := NewUDPBroadcastConn(67, 68)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	p := make([]byte, 1024)
+	if n, err := conn.Write(p); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Log(n)
+	}
+
+	if n, from, err := conn.Readfrom(p); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Log(from.Addr)
+		t.Log(p[:n])
 	}
 }

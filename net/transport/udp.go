@@ -10,7 +10,7 @@ import (
 
 const SIZEOF_UDP_HEADER = 8
 
-type Udp struct {
+type UDP struct {
 	IpH      *network.IPv4Header
 	SrcPort  uint16
 	DstPort  uint16
@@ -19,7 +19,7 @@ type Udp struct {
 	Data     []byte
 }
 
-func (u *Udp) Marshal() (b []byte, err error) {
+func (u *UDP) Marshal() (b []byte, err error) {
 	if u.IpH == nil {
 		return nil, errors.New("[udp] miss ip header")
 	}
