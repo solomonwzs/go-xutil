@@ -3,6 +3,7 @@ package datalink
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 	"syscall"
 	"time"
@@ -124,7 +125,7 @@ func recvArpReplyPacket(fd int, targetIP net.IP, res chan net.HardwareAddr) {
 }
 
 func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
-	interf, err := net.InterfaceByName("eno1")
+	interf, err := net.InterfaceByName(dev)
 	if err != nil {
 		return
 	}
@@ -170,6 +171,7 @@ func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
 	}
 	for {
 		for _, p0 := range p {
+			fmt.Printf("% x\n", p0)
 			if err = syscall.Sendto(fd, p0, 0, &to); err != nil {
 				return
 			}
