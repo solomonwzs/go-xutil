@@ -16,21 +16,17 @@ type DlSocket struct {
 	readFlags int
 }
 
-func NewDlSocket(dev string, ethType uint16) (sock *DlSocket, err error) {
-	gateway, err := xnetutil.GetGateway(dev)
+func NewDlSocket(interf *net.Interface, ethType uint16) (
+	sock *DlSocket, err error) {
+	gateway, err := xnetutil.GetGateway(interf.Name)
 	if err != nil {
 		return
 	}
 
-	hardwareAddr, err := xnetutil.GetHardwareAddr(dev, gateway)
+	hardwareAddr, err := xnetutil.GetHardwareAddr(interf.Name, gateway)
 	if err == xnetutil.ERR_NOT_FOUND {
-		hardwareAddr, err = GetHardwareAddr(dev, gateway, 0)
+		hardwareAddr, err = GetHardwareAddr(interf, gateway, 0)
 	}
-	if err != nil {
-		return
-	}
-
-	interf, err := net.InterfaceByName(dev)
 	if err != nil {
 		return
 	}

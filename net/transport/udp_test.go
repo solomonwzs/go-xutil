@@ -20,10 +20,10 @@ func _TestChecksum(t *testing.T) {
 	ipH, _ := network.IPv4HeaderUnmarshal(ipRaw)
 
 	u := &UDP{
-		IpH:     ipH,
-		SrcPort: 9999,
-		DstPort: 10000,
-		Length:  23,
+		IPHeader: ipH,
+		SrcPort:  9999,
+		DstPort:  10000,
+		Length:   23,
 		Data: []byte{
 			0x56, 0x53, 0x54, 0x41, 0x52, 0x43, 0x41, 0x4d,
 			0x51, 0x55, 0x45, 0x52, 0x59, 0x2c, 0x30,
@@ -34,18 +34,17 @@ func _TestChecksum(t *testing.T) {
 }
 
 func _TestUDP(t *testing.T) {
-	dev := "eno1"
+	interf, err := net.InterfaceByName("eno1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	sock, err := datalink.NewDlSocket(dev, syscall.ETH_P_IP)
+	sock, err := datalink.NewDlSocket(interf, syscall.ETH_P_IP)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sock.Close()
 
-	interf, err := net.InterfaceByName(dev)
-	if err != nil {
-		t.Fatal(err)
-	}
 	addrs, err := interf.Addrs()
 	if err != nil {
 		return
@@ -76,10 +75,10 @@ func _TestUDP(t *testing.T) {
 	}
 
 	u := &UDP{
-		IpH:     ipH,
-		SrcPort: 7777,
-		DstPort: 8888,
-		Data:    []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+		IPHeader: ipH,
+		SrcPort:  7777,
+		DstPort:  8888,
+		Data:     []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 	}
 
 	p1, _ := u.Marshal()

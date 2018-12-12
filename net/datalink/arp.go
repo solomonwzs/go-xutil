@@ -105,12 +105,14 @@ func (a *Arp) Marshal() (b []byte, err error) {
 	return
 }
 
-func recvArpReplyPacket(fd int, targetIP net.IP, res chan net.HardwareAddr) {
+func recvArpReplyPacket(fd int, targetIP net.IP, res chan net.HardwareAddr,
+	errChan chan error) {
 	buf := make([]byte, 1024)
 	arpRaw := ArpRaw(buf[14:])
 	for {
 		_, _, err := syscall.Recvfrom(fd, buf, 0)
 		if err != nil {
+			errChan <- err
 			return
 		}
 		if arpRaw.Opcode() == ARP_OPC_REPLY &&
@@ -124,11 +126,15 @@ func recvArpReplyPacket(fd int, targetIP net.IP, res chan net.HardwareAddr) {
 	}
 }
 
-func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
-	interf, err := net.InterfaceByName(dev)
-	if err != nil {
-		return
-	}
+func broadcastArpRequest(interf *net.Interface, fd int, targetIP net.IP,
+	errChan chan error) {
+	var err error = nil
+	defer func() {
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
 	addrs, err := interf.Addrs()
 	if err != nil {
 		return
@@ -171,7 +177,7 @@ func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
 	}
 	for {
 		for _, p0 := range p {
-			fmt.Printf("% x\n", p0)
+			fmt.Println(len(p0))
 			if err = syscall.Sendto(fd, p0, 0, &to); err != nil {
 				return
 			}
@@ -180,14 +186,14 @@ func broadcastArpRequest(fd int, dev string, targetIP net.IP) {
 	}
 }
 
-func GetHardwareAddr(dev string, targetIP net.IP, timeout time.Duration) (
+func GetHardwareAddr(interf *net.Interface, targetIP net.IP,
+	timeout time.Duration) (
 	hw net.HardwareAddr, err error) {
 	var (
-		timer *time.Timer = nil
-		end               = make(chan struct{})
-		res               = make(chan net.HardwareAddr, 1)
+		timer   *time.Timer = nil
+		res                 = make(chan net.HardwareAddr, 1)
+		errChan             = make(chan error)
 	)
-	defer close(end)
 
 	if timeout > 0 {
 		timer = time.NewTimer(timeout)
@@ -200,7 +206,7 @@ func GetHardwareAddr(dev string, targetIP net.IP, timeout time.Duration) (
 		return
 	}
 	defer syscall.Close(recvFd)
-	go recvArpReplyPacket(recvFd, targetIP, res)
+	go recvArpReplyPacket(recvFd, targetIP, res, errChan)
 
 	sendFd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
 		int(xnetutil.Htons(syscall.ETH_P_ALL)))
@@ -208,16 +214,20 @@ func GetHardwareAddr(dev string, targetIP net.IP, timeout time.Duration) (
 		return
 	}
 	defer syscall.Close(sendFd)
-	go broadcastArpRequest(sendFd, dev, targetIP)
+	go broadcastArpRequest(interf, sendFd, targetIP, errChan)
 
 	if timer != nil {
 		select {
+		case err = <-errChan:
 		case hw = <-res:
 		case <-timer.C:
 			return nil, xnetutil.ERR_TIMEOUT
 		}
 	} else {
-		hw = <-res
+		select {
+		case err = <-errChan:
+		case hw = <-res:
+		}
 	}
 	return
 }

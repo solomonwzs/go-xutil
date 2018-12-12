@@ -11,18 +11,17 @@ import (
 )
 
 func TestICMP0(t *testing.T) {
-	dev := "eno1"
+	interf, err := net.InterfaceByName("eno1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	sock, err := datalink.NewDlSocket(dev, syscall.ETH_P_IP)
+	sock, err := datalink.NewDlSocket(interf, syscall.ETH_P_IP)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sock.Close()
 
-	interf, err := net.InterfaceByName(dev)
-	if err != nil {
-		t.Fatal(err)
-	}
 	addrs, err := interf.Addrs()
 	if err != nil {
 		return

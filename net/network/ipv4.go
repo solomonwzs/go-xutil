@@ -4,9 +4,17 @@ import (
 	"encoding/binary"
 	"errors"
 	"net"
+	"sync/atomic"
 
 	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
+
+var _IPHdrID uint32 = 0
+
+func NewIPHdrID() uint16 {
+	id := atomic.AddUint32(&_IPHdrID, 1)
+	return uint16(id & 0xffff)
+}
 
 type IPv4Header struct {
 	Version    uint8

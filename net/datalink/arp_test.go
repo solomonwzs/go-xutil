@@ -107,6 +107,10 @@ func _TestT(t *testing.T) {
 }
 
 func TestGetHardwareAddr(t *testing.T) {
-	// fmt.Println(GetHardwareAddr("eno1", net.IP{192, 168, 197, 252}, 0))
-	fmt.Println(GetHardwareAddr("enp2s0", net.IP{10, 0, 0, 1}, 0))
+	interf, err := net.InterfaceByName("eno1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(GetHardwareAddr(interf, net.IP{192, 168, 197, 252}, 0))
+	// fmt.Println(GetHardwareAddr(interf, net.IP{10, 0, 0, 1}, 0))
 }

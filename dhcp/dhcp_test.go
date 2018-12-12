@@ -6,7 +6,9 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/solomonwzs/goxutil/net/ethernet"
 	"github.com/solomonwzs/goxutil/net/transport"
+	"github.com/solomonwzs/goxutil/net/xnetutil"
 )
 
 func _TestDHCP0(t *testing.T) {
@@ -170,5 +172,69 @@ func _TestUDP1(t *testing.T) {
 			t.Fatal(err)
 		}
 		fmt.Println(n, from)
+	}
+}
+
+func TestDHCP2(t *testing.T) {
+	interf, err := net.InterfaceByName("eno1")
+	if err != nil {
+		panic(err)
+	}
+
+	msg := NewMessaageForInterface(interf)
+	msg.SetMessageType(DHCPDISCOVER)
+	msg.SetBroadcast()
+	raw, err := transport.NewBroadcastUDPRaw(interf, CLIENT_PORT,
+		SERVER_PORT, msg.Marshal())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("% x\n", raw)
+
+	fd0, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
+		int(xnetutil.Htons(syscall.ETH_P_ALL)))
+	if err != nil {
+		panic(err)
+	}
+	defer syscall.Close(fd0)
+
+	fd1, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
+		int(xnetutil.Htons(syscall.ETH_P_IP)))
+	if err != nil {
+		panic(err)
+	}
+	defer syscall.Close(fd1)
+
+	addr := &syscall.SockaddrLinklayer{
+		Ifindex: interf.Index,
+	}
+	err = syscall.Sendto(fd0, raw, 0, addr)
+	if err != nil {
+		panic(err)
+	}
+
+	p := make([]byte, 1024)
+	for {
+		_, _, err := syscall.Recvfrom(fd1, p, 0)
+		if err != nil {
+			panic(err)
+		}
+
+		if len(p) < ethernet.SIZEOF_ETH_HEADER {
+			continue
+		}
+
+		_, u, err := transport.RawUDPUnmarshal(p)
+		if err != nil || u.DstPort != CLIENT_PORT {
+			continue
+		}
+
+		rMsg, err := Unmarshal(u.Data)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("%+v\n", rMsg)
+		break
 	}
 }
