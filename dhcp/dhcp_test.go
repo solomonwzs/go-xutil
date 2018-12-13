@@ -44,7 +44,7 @@ func _TestDHCP0(t *testing.T) {
 	f.Read(buf)
 }
 
-func TestDHCP1(t *testing.T) {
+func _TestDHCP1(t *testing.T) {
 	conn, err := transport.NewUDPBroadcastConn(CLIENT_PORT, SERVER_PORT)
 	if err != nil {
 		t.Fatal(err)
@@ -175,10 +175,10 @@ func _TestUDP1(t *testing.T) {
 	}
 }
 
-func TestDHCP2(t *testing.T) {
+func _TestDHCP2(t *testing.T) {
 	interf, err := net.InterfaceByName("eno1")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	msg := NewMessageForInterface(interf)
@@ -187,38 +187,39 @@ func TestDHCP2(t *testing.T) {
 	raw, err := transport.NewBroadcastUDPRaw(interf, CLIENT_PORT,
 		SERVER_PORT, msg.Marshal())
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	fmt.Printf("% x\n", raw)
 
 	fd0, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
 		int(xnetutil.Htons(syscall.ETH_P_ALL)))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer syscall.Close(fd0)
 
-	fd1, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
-		int(xnetutil.Htons(syscall.ETH_P_IP)))
-	if err != nil {
-		panic(err)
-	}
-	defer syscall.Close(fd1)
+	// fd1, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW,
+	// 	int(xnetutil.Htons(syscall.ETH_P_IP)))
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// defer syscall.Close(fd1)
 
 	addr := &syscall.SockaddrLinklayer{
 		Ifindex: interf.Index,
 	}
 	err = syscall.Sendto(fd0, raw, 0, addr)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	p := make([]byte, 1024)
 	for {
-		_, _, err := syscall.Recvfrom(fd1, p, 0)
+		_, f, err := syscall.Recvfrom(fd0, p, 0)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
+		fmt.Printf("%+v\n", f)
 
 		if len(p) < ethernet.SIZEOF_ETH_HEADER {
 			continue
@@ -228,13 +229,47 @@ func TestDHCP2(t *testing.T) {
 		if err != nil || u.DstPort != CLIENT_PORT {
 			continue
 		}
+		fmt.Printf("%+v\n", u.IPHeader)
 
 		rMsg, err := Unmarshal(u.Data)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 
 		fmt.Printf("%+v\n", rMsg)
 		break
 	}
+}
+
+func TestDHCP3(t *testing.T) {
+	interf, err := net.InterfaceByName("eno1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := transport.NewUDPBroadcastRawConn(interf,
+		CLIENT_PORT, SERVER_PORT)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	buf := make([]byte, 1024)
+
+	msg := NewMessageForInterface(interf)
+	msg.SetMessageType(DHCPDISCOVER)
+	msg.SetBroadcast()
+	_, err = conn.Write(msg.Marshal())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := conn.Read(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rMsg, err := Unmarshal(buf[:n])
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%+v\n", rMsg)
 }
