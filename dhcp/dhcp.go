@@ -33,7 +33,7 @@ func NewMessage() (msg *Message) {
 	return
 }
 
-func NewMessaageForInterface(interf *net.Interface) (msg *Message) {
+func NewMessageForInterface(interf *net.Interface) (msg *Message) {
 	msg = NewMessage()
 	msg.fix.Op = BOOTREQUEST
 	msg.fix.Htype = HTYPE_ETHERNET

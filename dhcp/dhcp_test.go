@@ -34,7 +34,7 @@ func _TestDHCP0(t *testing.T) {
 	}
 	fmt.Println(interf.HardwareAddr)
 
-	msg := NewMessaageForInterface(interf)
+	msg := NewMessageForInterface(interf)
 	msg.SetMessageType(DHCPDISCOVER)
 	msg.SetBroadcast()
 
@@ -58,7 +58,7 @@ func TestDHCP1(t *testing.T) {
 	buf := make([]byte, 1024)
 
 	// discover
-	msg := NewMessaageForInterface(interf)
+	msg := NewMessageForInterface(interf)
 	msg.SetMessageType(DHCPDISCOVER)
 	msg.SetBroadcast()
 	if _, err = conn.Write(msg.Marshal()); err != nil {
@@ -89,7 +89,7 @@ func TestDHCP1(t *testing.T) {
 	fmt.Printf("lease time:  %d\n", leaseTime)
 
 	// request
-	msg = NewMessaageForInterface(interf)
+	msg = NewMessageForInterface(interf)
 	msg.SetBroadcast()
 	msg.SetMessageType(DHCPREQUEST)
 	msg.SetOptions(OPT_ADDR_REQUEST, []byte(clientIP))
@@ -181,7 +181,7 @@ func TestDHCP2(t *testing.T) {
 		panic(err)
 	}
 
-	msg := NewMessaageForInterface(interf)
+	msg := NewMessageForInterface(interf)
 	msg.SetMessageType(DHCPDISCOVER)
 	msg.SetBroadcast()
 	raw, err := transport.NewBroadcastUDPRaw(interf, CLIENT_PORT,
