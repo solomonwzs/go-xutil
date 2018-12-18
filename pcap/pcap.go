@@ -2,6 +2,7 @@ package pcap
 
 /*
 #cgo linux LDFLAGS: -lpcap
+#cgo darwin LDFLAGS: -lpcap
 
 #include <pcap.h>
 #include <stdint.h>
@@ -161,15 +162,12 @@ func PcapFindAllDevs() ([]string, error) {
 // 	return C.GoString(dev), nil
 // }
 
-func OpenLive(dev string, snaplen int, promisc bool, timeout time.Duration) (
+func OpenLive(interf *net.Interface, snaplen int, promisc bool,
+	timeout time.Duration) (
 	h *Handle, err error) {
-	interf, err := net.InterfaceByName(dev)
-	if err != nil {
-		return
-	}
 	h = &Handle{interf: interf, pktLock: &sync.Mutex{}}
 
-	cDev := C.CString(dev)
+	cDev := C.CString(interf.Name)
 	defer C.free(unsafe.Pointer(cDev))
 
 	var pro C.int = 0
@@ -243,7 +241,8 @@ func (h *Handle) SetFilter(expr string) (err error) {
 	return nil
 }
 
-func (h *Handle) ReadPacket(copy bool) (packet CapturePacket, err error) {
+func (h *Handle) ReadPacket(copyData bool) (
+	packet CapturePacket, err error) {
 	// if h.timeout > 0 {
 	// 	var ready bool
 	// 	if ready, err = h.waitForRead(h.timeout); err != nil {
@@ -269,7 +268,7 @@ func (h *Handle) ReadPacket(copy bool) (packet CapturePacket, err error) {
 	)
 	packet.Caplen = uint32(h.pkthdr.caplen)
 	packet.Len = uint32(h.pkthdr.len)
-	if copy {
+	if copyData {
 		packet.Data = C.GoBytes(unsafe.Pointer(h.packet),
 			C.int(h.pkthdr.len))
 	} else {

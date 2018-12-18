@@ -1,6 +1,7 @@
 package pcap
 
 import (
+	"net"
 	"os"
 	"syscall"
 	"testing"
@@ -29,7 +30,11 @@ func TestPcap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h, err := OpenLive(dev[0], 512, true, 1*time.Second)
+	interf, err := net.InterfaceByName(dev[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := OpenLive(interf, 512, true, 1*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
