@@ -12,7 +12,23 @@ int csock;
 
 void
 _notify_go(int sig, siginfo_t *info, void *context) {
+	printf("c: it is evil!\n");
 	write(csock, &sig, sizeof(sig));
+}
+
+int
+_sigaltstack() {
+	static char _stack[SIGSTKSZ];
+	stack_t ss = {
+		.ss_size = SIGSTKSZ,
+		.ss_sp = _stack,
+	};
+
+	if (sigaltstack(&ss, 0) != 0) {
+		perror("sigaltstack: ");
+		return -1;
+	}
+	return 0;
 }
 
 int
@@ -21,6 +37,7 @@ _signal_handle(int flags, int sig) {
 	sigemptyset(&action.sa_mask);
 	action.sa_sigaction = _notify_go;
 	action.sa_flags = flags;
+
 	if (sigaction(sig, &action, NULL) != 0) {
 		perror("csignal: ");
 		return -1;
@@ -59,6 +76,7 @@ func init() {
 		panic(err)
 	}
 	C.csock = C.int(fd[0])
+	// C._sigaltstack()
 
 	handlers.m = map[os.Signal][]chan<- os.Signal{}
 
