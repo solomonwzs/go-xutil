@@ -50,18 +50,11 @@ type Record struct {
 	Level   int
 }
 
-func newRecord(level int, calldepth int, format string, argv ...interface{}) *Record {
+func newRecord(level int, calldepth int, msg string) *Record {
 	_, file, line, ok := runtime.Caller(calldepth)
 	if !ok {
 		file = "???"
 		line = 0
-	}
-
-	var msg string
-	if format == "" {
-		msg = fmt.Sprintln(argv...)
-	} else {
-		msg = fmt.Sprintf(format, argv...)
 	}
 
 	return &Record{

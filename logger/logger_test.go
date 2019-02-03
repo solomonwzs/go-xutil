@@ -4,18 +4,23 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/solomonwzs/goxutil/logger"
 )
 
-func TestLogger(t *testing.T) {
-	logger.NewLogger(func(r *logger.Record) {
-		fmt.Printf("%s", r)
-	})
+type LP struct{}
 
-	logger.Debug("hello")
-	logger.Warn("hello")
-	logger.Error("hello")
+func (lp LP) L(r *Record) error { fmt.Printf("%s", r); return nil }
+func (lp LP) Close() error      { return nil }
+
+func TestLogger(t *testing.T) {
+	l, err := NewLogger(LP{})
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+
+	Debugln("hello")
+	Warnln("hello")
+	Errorln("hello")
 
 	time.Sleep(1 * time.Second)
 }
