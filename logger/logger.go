@@ -28,9 +28,22 @@ type LogProcessor interface {
 	Close() error
 }
 
+type MsgLogProcessor interface {
+	L(r *Record) error
+	M(msg interface{}) error
+	Close() error
+}
+
 type Logger struct {
 	lp  LogProcessor
 	sub *pubsub.Subscriber
+	closer.Closer
+}
+
+type MsgLogger struct {
+	mlp MsgLogProcessor
+	sub *pubsub.Subscriber
+	ch  chan interface{}
 	closer.Closer
 }
 
@@ -46,9 +59,7 @@ func (l *Logger) serv() {
 		case <-l.Done():
 			return
 		case <-l.sub.Ready():
-			if record, err := l.sub.NonBlockRecv(); err != nil {
-				return
-			} else {
+			if record, err := l.sub.NonBlockRecv(); err == nil {
 				l.lp.L(record.(*Record))
 			}
 		}
@@ -72,6 +83,40 @@ func NewLogger(lp LogProcessor) (*Logger, error) {
 	}
 	go l.serv()
 	return l, nil
+}
+
+func (ml *MsgLogger) serv() {
+	for {
+		select {
+		case <-ml.Done():
+			return
+		case msg := <-ml.ch:
+			ml.mlp.M(msg)
+		case <-ml.sub.Ready():
+			if record, err := ml.sub.NonBlockRecv(); err == nil {
+				ml.mlp.L(record.(*Record))
+			}
+		}
+	}
+}
+
+func NewMsgLogger(mlp MsgLogProcessor) (*MsgLogger, error) {
+	sub := logChannel.NewSubscriber()
+	if sub == nil {
+		return nil, errors.New("new logger error")
+	}
+
+	atomic.AddInt32(&loggerN, 1)
+	ml := &MsgLogger{
+		mlp: mlp,
+		sub: sub,
+		Closer: closer.NewCloser(func() error {
+			atomic.AddInt32(&loggerN, -1)
+			return mlp.Close()
+		}),
+	}
+	go ml.serv()
+	return ml, nil
 }
 
 func init() {
